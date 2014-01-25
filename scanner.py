@@ -23,62 +23,75 @@ import sys
 
 from tokens import token_table as token_table
 
-f = open(sys.argv[1]).read()
-
-line_cnt = 1
-colm_pos = 1
+index     = 0
+line_num  = 1
 
 curr_char = ""
 next_char = ""
 
-index = 0
+tokens    = []
 
-tokens = []
+def read_file(file_read):
+    global f_read
+    f_read = open(file_read).read()
 
-#def end_of_line():
-#
-#    for char in tokens:
-#        if (char == "\n"):
-#            eol = 1
-#
-#        return eol
+    return f_read
 
 def get_next_char():
     global curr_char
     global next_char
     global index
 
-    curr_char = f[index]
+    curr_char = f_read[index]
 
-    if (index+1 == len(f)):
+    if (index+1 == len(f_read)):
         next_char = None
     else:
-        next_char = f[index+1]
+        next_char = f_read[index+1]
 
     index += 1
 
+    return curr_char, next_char, index
+
 def update_line_cnt():
-    global line_cnt
-    global colm_pos
+    global line_num
 
-    if (next_char == "\n"):
-        line_cnt += 1
-        colm_pos  = 1
+    if (next_char == "\n" or next_char == "\r\n"):
+        line_num += 1
 
-    return line_cnt, colm_pos
+    return line_num
+
+def print_error(error_message, line):
+
+    red     = '\033[31m'
+    default = '\033[0m'
+
+    print red + "[error]: " + default + "%s on line: %i" % (error_message, line)
+    return
+
+def print_warning(warning_message, line):
+
+    yellow  = '\033[93m'
+    default = '\033[0m'
+
+    print yellow + "[warning]: " + default + "%s on line: %i" % (warning_message, line)
+    return
+
+def debug(message, l, tok):
+    print message,"\t" + tok, "\t\t" + str(l)
 
 def get_tokens():
-    global line_cnt
-    global colm_pos
+    global line_num
 
-    error = 0
+    error        = 0
+    debug        = 0
 
     curr_token   = ""
-    reserved_ids = ['string'   , 'int'  , 'bool'  , 'float'  ,
-                    'global'   , 'in'   , 'out'   , 'if'     ,
-                    'then'     , 'else' , 'case'  , 'for'    ,
-                    'not'      , 'true' , 'false' , 'program',
-                    'procedure', 'begin', 'return', 'end'    ]
+    reserved_ids = ['string'   , 'integer', 'bool'  , 'float'  ,
+                    'global'   , 'in'     , 'out'   , 'if'     ,
+                    'then'     , 'else'   , 'is'    , 'for'    ,
+                    'not'      , 'true'   , 'false' , 'program',
+                    'procedure', 'begin'  , 'return', 'end'    ]
 
     operators    = ["<", ">", "!", ":"]
 
@@ -91,16 +104,17 @@ def get_tokens():
         if (curr_char.isalpha()):
             curr_token = curr_char
 
-            # check for white space
-            #if (curr_token == " "):
-
             # keep fetching the next char until it's no longer
             # alphanumeric and we have not hit the end of a new
             # line
             while (next_char.isalnum() and next_char != "\n"):
                 curr_token += next_char
                 get_next_char()
-                colm_pos += 1
+
+            if (debug): debug("alhpa: ", line_num, curr_token)
+
+            # force case insensitive
+            curr_token = curr_token.lower()
 
             if (curr_token in reserved_ids):
                 tokens.append(("res_id", curr_token))
@@ -121,37 +135,40 @@ def get_tokens():
                 if (((next_char == ".") and (next_char not in curr_token)) or next_char.isdigit()):
                     curr_token += next_char
                     get_next_char()
-                    colm_pos += 1
+
                 else:
                     error = 1
                     break
+
+            if (debug): debug("digit: ", line_num, curr_token)
 
             if (error):
                 while (next_char != "\n"):
                     curr_token += next_char
                     get_next_char()
-                    colm_pos += 1
 
-                tokens.append(("unknown_token_digit", curr_token))
-                print "[error]: '%s': line:%i:%i" % (curr_token, line_cnt, colm_pos)
+                if (debug): debug("err digit: ", line_num, curr_token)
+
+                print_error("unknown token"   , line_num)
+                tokens.append(("unknown_token", curr_token))
 
             else:
 
                 # check for leading zero
                 if (curr_token[0] == "."):
-                    print "[warning]: leading zero is missing on line:%i, it has been added" % (line_cnt)
                     curr_token = '0' + curr_token
+                    print_warning("leading zero is missing, it has been added", line_num)
 
                 # check for trailing zero
                 if (curr_token[-1] == "."):
-                    print "[warning]: trailing zero is missing on line:%i, it has been added" % (line_cnt)
                     curr_token += '0'
+                    print_warning("trailing zero is missing, it has been added", line_num)
 
                 # check for type int or float
                 if ("." in curr_token):
-                    tokens.append(("float", curr_token))
+                    tokens.append(("float",   curr_token))
                 else:
-                    tokens.append(("int"  , curr_token))
+                    tokens.append(("integer", curr_token))
 
         # check for strings
         elif (curr_char == "\""):
@@ -162,23 +179,24 @@ def get_tokens():
             while ((next_char not in ["\"", "\\"]) and (next_char != "\n")):
                 curr_token += next_char
                 get_next_char()
-                colm_pos += 1
+
+            if (debug): debug("seq: ", line_num, curr_token)
 
             if ((next_char == "\"") and (next_char != "\n")):
                 curr_token += next_char
                 get_next_char()
-                colm_pos += 1
                 tokens.append(("string", curr_token))
+                if (debug): debug("string: ", line_num, curr_token)
 
             else:
-                print "[error]: missing quote: line:%i:%i" % (line_cnt, colm_pos)
-                tokens.append(("unknown_token_str", curr_token))
+                print_error(   "missing quote"    , line_num)
+                tokens.append(("unknown_token", curr_token))
 
         else:
 
             # ignore white space
-            # i don't think i need this
-            if (curr_char.isspace()): continue
+            if (curr_char.isspace()):
+                pass
 
             # check for operators - <, >, !, :
             elif (curr_char in operators):
@@ -188,30 +206,31 @@ def get_tokens():
                 if (next_char == "="):
                     curr_token += next_char
                     get_next_char()
-                    colm_pos += 1
                     tokens.append((token_table[curr_token], curr_token))
 
                 # check for unsupported operators: <<, >>, !!, ::
                 if (next_char in operators):
                     curr_token += next_char
                     get_next_char()
-                    colm_pos += 1
-                    tokens.append(("unknown_token_op", curr_token))
+                    print_error(   "operator not supported", line_num)
+                    tokens.append(("unknown_token"         , curr_token))
 
             # check for division or comment
             elif (curr_char == "/"):
                 curr_token = curr_char
 
-                #if ((next_char.isdigit() or next_char.isalpha()) and (next_char != "\n")):
+                if (debug): debug("div: ", line_num, curr_token)
+
+                #while ((next_char != "/" and (next_char.isdigit() or next_char.isalnum()) and (next_char != "\n")):
                 if (next_char != "/" and next_char != "\n"):
-                    colm_pos += 1
                     tokens.append((token_table[curr_token], curr_token))
 
                 elif (next_char == "/"):
                     while (next_char != "\n"):
                         curr_token += next_char
                         get_next_char()
-                        colm_pos += 1
+
+                    if (debug): debug("comment: ", line_num, curr_token)
 
                     # most likely token_table will be gone, much simplier to just
                     # pass in the strings directly
@@ -221,20 +240,24 @@ def get_tokens():
             elif (curr_char == "\\"):
                 curr_token = curr_char
 
+                if (debug): debug("esq seq: ", line_num, curr_token)
+
                 if (next_char in ["t", "n"] and next_char != "\n"):
                     curr_token += next_char
                     get_next_char()
-                    colm_pos += 1
 
                 else:
-                    print "[error]: escape sequence, %s is not supported: line:%i:%i" % (curr_token, line_cnt, colm_pos)
+                    print_error("escape sequence is not supported", line_num)
 
                 tokens.append((token_table[curr_token], curr_token))
 
             elif (curr_char in token_table):
                 tokens.append((token_table[curr_char], curr_char))
+                if (debug): debug("tok table: ", line_num, curr_char)
+
             else:
-                tokens.append(("unknown_token_tok", curr_char))
+                tokens.append(("unknown_token"         , curr_char))
+                if (debug): debug("unknown tok table: ", line_num, curr_char)
 
         update_line_cnt()
 
@@ -245,9 +268,11 @@ def main():
 
     program_file = sys.argv[1]
     if (program_file.endswith('.ee')):
+        read_file(program_file)
         get_tokens()
 
     else:
         print "file format not recognized"
 
-main()
+if (__name__ == "__main__"):
+    main()
