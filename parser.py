@@ -28,98 +28,37 @@
 #from scanner import get_tokens
 from scanner import *
 
-curr_tok_idx = 0
-next_tok_idx = 0
-
-curr_tok = ""
-next_tok = ""
 data_types = ["integer","float","bool","string"]
-
-count    = 1
-
-var_dec  = 0
-proc_dec = 0
 
 class parser:
     def __init__(self, tokens):
-        self.curr_tok     = next(tokens)
-        self.next_tok     = next(tokens)
-
-        print self.curr_tok
-        print self.next_tok
+        self.tokens   = tokens
+        self.curr_tok = next(self.tokens)
+        self.next_tok = next(self.tokens)
 
         self.curr_tok_typ = self.curr_tok[0]
         self.curr_tok_lex = self.curr_tok[1]
 
-        print self.curr_tok_typ
-        print self.curr_tok_lex
-
         self.next_tok_typ = self.next_tok[0]
         self.next_tok_lex = self.next_tok[1]
 
-        print self.next_tok_typ
-        print self.next_tok_lex
         #self.line_num  = self.tokens[2]
 
-    def _get(self):
-        print self.curr_tok
-        self.next_tok     = next(self.curr_tok)
-        print self.next_tok
+        self.var_dec = 0
+        self.prc_dec = 0
 
+        return
 
-    '''
     def _get_next_tok(self):
         self.curr_tok_typ = self.next_tok_typ
         self.curr_tok_lex = self.next_tok_lex
 
-        self.next_tok     = next(tokens);
+        self.next_tok     = next(self.tokens);
         self.next_tok_typ = self.next_tok[0]
         self.next_tok_lex = self.next_tok[1]
-        '''
 
-    #def __init__(self, tokens):
-    #    self.tokens = tokens
-    #def __init__(self, token_lex, token_type, line_num):
-    #    self.token_type = token_type;
-    #    self.token_lex  = token_lex;
-    #    self.line_num   = line_num;
+        return
 
-    #def _get_next_tok(self):
-    #    global curr_tok
-    #    global curr_t
-    #    global next_t
-    #    global next_tok
-    #    global curr_lex
-    #    global next_lex
-
-    #    global count
-
-    #    if (count):
-    #        curr_t = next(self.tokens)
-    #        count = 0
-    #    else:
-    #        curr_t = next_t
-
-    #    next_t = next(self.tokens)
-
-    #    #print "[1]" + str(curr_t)
-    #    #print "[1]" + str(next_t)
-
-    #    curr_tok = curr_t[0]
-    #    next_tok = next_t[0]
-
-    #    #print "[2]" + str(curr_tok)
-    #    #print "[2]" + str(next_tok)
-
-    #    curr_lex = curr_t[1]
-    #    next_lex = next_t[1]
-
-    #    #print curr_lex
-    #    #print next_lex
-
-    #    return next_tok
-
-    '''
     def _type_mark(self, token_type):
         self.token_type = token_type
 
@@ -130,30 +69,30 @@ class parser:
 
     # might change everything to y combinators
     def _if_statement(self):
-        if (next_tok == "if"):
+        if (self.next_tok_typ == "if"):
             self._get_next_tok()
-            if (next_tok != "("):
-                print_error("[syntax error]: was expecting '(', received: ", next_tok, line_num)
+            if (self.next_tok_lex != "("):
+                print_error("[syntax error]: was expecting '(', received: ", self.next_tok_lex, line_num)
                 next(f)
             else:
                 self._get_next_tok()
                 self._expression()
-                if (next_tok == ")"):
+                if (self.next_tok_lex == ")"):
                     self._get_next_tok()
-                    if (next_tok != "then"):
-                        print_error("[syntax error]: was expecting 'then', received: ", next_tok, line_num)
+                    if (self.next_tok_typ != "then"):
+                        print_error("[syntax error]: was expecting 'then', received: ", self.next_tok_typ, line_num)
                         next(f)
                     else:
                         self._get_next_tok()
                         _statement()
-                        if (next_tok == ";"):
+                        if (self.next_tok_lex == ";"):
                             self._get_next_tok()
-                            if (next_tok == "else"):
+                            if (self.next_tok_typ == "else"):
                                 self._get_next_tok()
                                 return _if_statement()
-                            elif (next_tok == "end"):
+                            elif (self.next_tok_typ == "end"):
                                 self._get_next_tok()
-                                if (next_tok == "if"):
+                                if (self.next_tok_typ == "if"):
                                     self._get_next_tok()
                                     return
                                 else:
@@ -163,33 +102,35 @@ class parser:
         if (relational)
 
     def _return(self):
-        if (next_tok == "return"):
+        if (self.next_tok_typ == "return"):
             # keep track of addresses, return
             # back to procedure call
 
     def _expression(self):
         i = 0
         r = []
-        print next_tok
-        print next_lex
-        while (next_tok != ";"):
-            self._get_next_tok()
-            if ((next_lex == "not") and (next_tok not in reserved_ids)):
+        print self.next_tok_typ
+        print self.next_tok_lex
+        while (self.next_tok_lex != ";"):
+            #if ((self.next_tok_typ == "not") and (self.next_tok_typ not in reserved_ids)):
+            if (self.next_tok_typ == "not"):
                 self._get_next_tok()
-                r.append(~self._expression())
-                yield ~self._expression()
-                fwrite.write("R[%i] = not(R[%i])\n" %(i, i))
-                print r[0]
-                continue
-            if (next_tok == ")"):
+                if (self.next_tok_lex not in reserved_ids)):
+                    self._get_next_tok()
+                    r.append(~self._expression())
+                    yield ~self._expression()
+                    fwrite.write("R[%i] = not(R[%i])\n" %(i, i))
+                    print r[0]
+                    continue
+            if (self.next_tok_typ == ")"):
                 r.append(self._arith_op())
                 return r[0]
-            if (next_tok == "&"):
+            if (self.next_tok_typ == "&"):
                 self._get_next_tok()
                 r.append(self._expression())
                 r[0] = r[0] & r[1]
                 fwrite.write("R[%i] = R[%i] & R[%i])\n" %(i, i, i+1))
-            elif (next_tok == "|"):
+            elif (self.next_tok_typ == "|"):
                 self._get_next_tok()
                 r.append(self._expression())
                 r[0] = r[0] | r[1]
@@ -203,31 +144,31 @@ class parser:
         token_typ = factor[0]
         token_lex = factor[1]
         while (token_typ != -1):
-            if (token_typ == 
+            if (token_typ ==
                 self._get_next_tok()
-                if (next_lex == "/" and next_tok == "divide"):
+                if (self.next_tok_lex == "/" and self.next_tok_typ == "divide"):
 
     def _factor(self):
-        if (next_lex == "false"):
-            return (next_tok, next_lex)
-        elif (next_lex == "true"):
-            return (next_tok, next_lex)
-        elif (next_lex == "string"):
-            return (next_tok, next_lex)
-        elif (next_tok == "integer" or next_lex == "float"):
-            return (next_tok, next_lex)
-        elif (next_tok == "id" and next_lex not in reserved_ids):
-            return (next_tok, next_lex)
-        elif (next_lex == "("):
-            return (next_lex, self._expression())
+        if (self.next_tok_lex == "false"):
+            return (self.next_tok_typ, self.next_tok_lex)
+        elif (self.next_tok_lex == "true"):
+            return (self.next_tok_typ, self.next_tok_lex)
+        elif (self.next_tok_lex == "string"):
+            return (self.next_tok_typ, self.next_tok_lex)
+        elif (self.next_tok_typ == "integer" or self.next_tok_lex == "float"):
+            return (self.next_tok_typ, self.next_tok_lex)
+        elif (self.next_tok_typ == "id" and self.next_tok_lex not in reserved_ids):
+            return (self.next_tok_typ, self.next_tok_lex)
+        elif (self.next_tok_lex == "("):
+            return (self.next_tok_lex, self._expression())
         else:
             return -1
 
     def _array_delcaration(self):
 
-        if (next_lex == "integer"):
+        if (self.next_tok_lex == "integer"):
             self._get_next_tok()
-            if (next_tok == "]"):
+            if (self.next_tok_typ == "]"):
                 return
             else:
                 print_error("[syntax error]: missing closed square bracket ']'", "", line_num)
@@ -235,49 +176,47 @@ class parser:
             print_error("[syntax error]: array size must be of type int", "", line_num)
 
     def _variable_dec(self):
-        global var_dec
-        var_dec = 0
+        self.var_dec = 0
 
+        print self.next_tok_typ
+        print self.next_tok_lex
         # make sure token is not a reserved id
-        if (next_tok not in reserved_ids):
+        if (self.next_tok_lex not in reserved_ids):
             self._get_next_tok()
             # check if we have declared an array
-            if (next_tok == "["):
+            if (self.next_tok_lex == "["):
                 self._get_next_tok()
                 self._array_delcaration()
             # check for variable initialization
             # come back to handle this
-            elif (next_tok == ":"):
+            elif (self.next_tok_lex == ":"):
                 self._get_next_tok()
-                if (next_tok == "="):
+                if (self.next_tok_lex == "="):
                     pass
 
             # check for end of var declaration
-            elif (next_tok == ";"):
+            elif (self.next_tok_lex == ";"):
+                print self.next_tok_lex
                 return
-        else:
-            print curr_tok
-            print curr_lex
-            print next_lex
 
     #def _parameter(self):
 
     def _parameter_list(self):
-        if (self._type_mark(next_tok)):
+        if (self._type_mark(self.next_tok_typ)):
             self._get_next_tok()
             self._declaration()
-            if (var_dec and (next_tok == "in" or next_tok == "out"))
-                if (next_tok == ","):
+            if (self.var_dec and (self.next_tok_typ == "in" or self.next_tok_typ == "out")):
+                if (self.next_tok_lex == ","):
                     self._get_next_tok()
                     self._declaration()
-                elif (next_tok == ")"):
+                elif (self.next_tok_lex == ")"):
                     self._get_next_tok()
                     self._procedure_body()
 
                     return
 
     def _procedure_dec(self):
-        if (next_tok == "("):
+        if (self.next_tok_lex == "("):
             self._get_next_tok()
             self._parameter_list()
 
@@ -289,53 +228,51 @@ class parser:
 
 
     def _declaration(self):
-        global var_dec
-        global proc_dec
-
-        print curr_tok
 
         # check for variable declaration
-        if (curr_tok == self._type_mark(curr_tok) and next_tok == "id"):# and not(eof)):
-            var_dec = 1
-            return
+        if (self.next_tok_typ == self._type_mark(self.next_tok_typ)):
+            self._get_next_tok()
+            if (self.next_tok_typ == "id"):
+                self.var_dec = 1
+                return
 
         # check for procedure declaration
-        elif (curr_tok == "procedure" and next_tok == "id"):
-            proc_dec = 1
-            return
+        elif (self.next_tok_typ == "procedure"):
+            if (self.next_tok_typ == "id"):
+                self.prc_dec = 1
+                return
 
-    def _assignment(self):
-        if (next_tok == "id")
+    #def _assignment(self):
+    #    if (self.next_tok_typ == "id")
 
-    def _statement(self):
-        if (assignment):
-            self._get_next_tok()
-            self._assignment()
-        elif (if_stment):
-            self._get_next_tok()
-            self._if_statement()
-        elif (loop_stment):
-            self._get_next_tok()
+    #def _statement(self):
+    #    if (assignment):
+    #        self._get_next_tok()
+    #        self._assignment()
+    #    elif (if_stment):
+    #        self._get_next_tok()
+    #        self._if_statement()
+    #    elif (loop_stment):
+    #        self._get_next_tok()
 
     def _program_body(self):
 
-        self._get_next_tok()
-        print curr_tok
-
-        if (curr_tok == "global"):
+        if (self.next_tok_typ == "global"):
+            print self.next_tok_typ
             self._get_next_tok()
+            print self.next_tok_typ
             self._declaration()
 
-            if (proc_dec)
-                self._get_next_tok()
+            if (self.prc_dec):
+                #self._get_next_tok()
                 self._procedure_dec()
-            elif (var_dec)
-                self._get_next_tok()
+            elif (self.var_dec):
+                #self._get_next_tok()
                 self._variable_dec()
 
         # make sure to handle this
-        elif (curr_tok == "begin"):
-            if (var_dec or proc_dec):
+        elif (self.curr_tok_typ == "begin"):
+            if (self.var_dec or self.prc_dec):
                 print_error("[syntax error]: cannot have declarations inside 'begin' statement", "", line_num)
             else:
                 pass
@@ -343,21 +280,19 @@ class parser:
         else:
             print_error("[syntax error]: must be of type 'global'", "", line_num)
 
-        while (next_tok != "eof"): return _program_body()
+        #while (self.next_tok_typ != "eof"): return _program_body()
         #while (not(eof)): return _program_body()
-        #while (curr_tok != "end" and next_tok != "program"): return _program_body()
+        #while (self.curr_tok_typ != "end" and self.next_tok_typ != "program"): return _program_body()
 
     def _program_header(self):
 
-        self._get_next_tok()
-        print curr_tok
-
-        if ((curr_tok == "program" and next_tok == "id")):# and not(eof)):
-            print next_lex
+        print self.curr_tok_typ
+        if ((self.curr_tok_typ == "program" and self.next_tok_typ == "id")):# and not(eof)):
+            print self.next_tok_lex
             self._get_next_tok()
 
-            if(next_tok == "is"):
-                print next_tok
+            if(self.next_tok_typ == "is"):
+                print self.next_tok_typ
                 self._get_next_tok()
                 self._program_body()
 
@@ -368,10 +303,8 @@ class parser:
             print_error("[syntax error]: program header must start with 'program _id_'", "", line_num)
 
         #return
-        '''
 
 if (__name__ == "__main__"):
     main()
     parse = parser(get_tokens())
-    #parse._get()
-    #parse._program_header()
+    parse._program_header()
