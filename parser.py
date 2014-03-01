@@ -27,8 +27,11 @@
 #from scanner import update_line_cnt
 #from scanner import get_tokens
 from scanner import *
+from exceps  import *
 
-data_types = ["integer","float","bool","string"]
+data_types = reserved_ids[0:4]
+count = 0
+r = []
 
 class parser:
     def __init__(self, tokens):
@@ -42,20 +45,27 @@ class parser:
         self.next_tok_typ = self.next_tok[0]
         self.next_tok_lex = self.next_tok[1]
 
-        #self.line_num  = self.tokens[2]
+        self.line_num     = self.tokens[2]
 
         self.var_dec = 0
         self.prc_dec = 0
 
+        self._assign = 0
+        self._if     = 0
+        self._for    = 0
+        self._return = 0
+
         return
 
     def _get_next_tok(self):
-        self.curr_tok_typ = self.next_tok_typ
-        self.curr_tok_lex = self.next_tok_lex
+        #self.curr_tok_typ = self.next_tok_typ
+        #self.curr_tok_lex = self.next_tok_lex
 
         self.next_tok     = next(self.tokens);
         self.next_tok_typ = self.next_tok[0]
         self.next_tok_lex = self.next_tok[1]
+
+        self.line_num     = self.next_tok[2]
 
         return
 
@@ -67,244 +77,528 @@ class parser:
         else:
             return 0
 
+    def _skip_line(self):
+        while (next_char != "\n" or next_char != "\r\n"):
+            self._get_next_tok()
+            continue
+        return
+
     # might change everything to y combinators
     def _if_statement(self):
-        if (self.next_tok_typ == "if"):
-            self._get_next_tok()
+        # (
+        try:
             if (self.next_tok_lex != "("):
-                print_error("[syntax error]: was expecting '(', received: ", self.next_tok_lex, line_num)
-                next(f)
-            else:
+                raise ErrorToken("(", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            # better just keep parsing, makes 0 sense
+            # to skip line--handle it later
+            _skip_line()
+            return
+        # <expression>
+        else:
+            self._get_next_tok()
+            self._expression()
+            self._get_next_tok()
+        # )
+        try:
+            if (self.next_tok_lex != ")"):
+                raise ErrorToken(")", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            _skip_line()
+            return
+        else:
+            self._get_next_tok()
+        # then
+        try:
+            if (self.next_tok_typ != "then"):
+                raise ErrorToken("then", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            _skip_line()
+            return
+        # <statement>
+        else:
+            self._get_next_tok()
+            #self._statement()
+            try:
+                if (self._statement() == None and count == 0):
+                    #raise ErrorToken("missing statement after 'then' in 'if' block", "", line_num)
+                    raise ErrorToken("statement", "no statement")
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+                _skip_line()
+                return
+            #else:
+            self._get_next_tok()
+            if (self.next_tok_lex == "end"):
                 self._get_next_tok()
-                self._expression()
-                if (self.next_tok_lex == ")"):
+                try:
+                    if (self.next_tok_lex != "if"):
+                        raise ErrorToken("if", self.next_tok_lex)
+                except ErrorToken, e:
+                    e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+                    _skip_line()
+                    return
+            elif (self.next_tok_typ == "else"):
+                try:
+                    if (self._statement() == None and count == 0):
+                        #raise ErrorToken("missing statement after 'then' in 'if' block", "", line_num)
+                        raise ErrorToken("statement", "no statement")
+                except ErrorToken, e:
+                    e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+                    _skip_line()
+                    return
+                if (self.next_tok_lex == "end"):
                     self._get_next_tok()
-                    if (self.next_tok_typ != "then"):
-                        print_error("[syntax error]: was expecting 'then', received: ", self.next_tok_typ, line_num)
-                        next(f)
-                    else:
-                        self._get_next_tok()
-                        _statement()
-                        if (self.next_tok_lex == ";"):
-                            self._get_next_tok()
-                            if (self.next_tok_typ == "else"):
-                                self._get_next_tok()
-                                return _if_statement()
-                            elif (self.next_tok_typ == "end"):
-                                self._get_next_tok()
-                                if (self.next_tok_typ == "if"):
-                                    self._get_next_tok()
-                                    return
-                                else:
-                                    print_error("[syntax error]: missing keyword 'if' after 'end'", "", line_num)
+                    try:
+                        if (self.next_tok_lex != "if"):
+                            raise ErrorToken("if", self.next_tok_lex)
+                    except ErrorToken, e:
+                        e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+                        _skip_line()
+                        return
 
-    def _arith_op(self):
-        if (relational)
+    def _statement(self):
+        global count
+        # look for next token after 'id'->':='
+        if ((self.next_tok_typ == "id")             and
+            (self.next_tok_lex not in reserved_ids) and
+            (~self.prc_dec)):
+            self._get_next_tok()
+            self._assign = 1
+            count = 1
+            return self._assign
+            #self._expression()
+            #self._assignment()
+            #return 1
+        elif (self.next_tok_typ == "if"):
+            self._get_next_tok()
+            self._if_statement()
+            self._if = 2
+            count = 1
+            return self._if
+            #return 2
+        elif (self.next_tok_typ == "for"):
+            self._get_next_tok()
+            self._for_loop()
+            self._for = 3
+            count = 1
+            return self._for
+            #return 3
+        elif (self.next_tok_typ == "return"):
+            self._get_next_tok()
+            self._return = 4
+            count = 1
+            return self._return
+            #self._return()
+            #return 4
+        elif (self.next_tok_typ == "id" and self.prc_dec):
+            self._get_next_tok()
+            self._procedure_body()
+            self.prc_dec = 5
+            count = 1
+            return self.prc_dec
+            #return 5
+        else:
+            return None
 
-    def _return(self):
-        if (self.next_tok_typ == "return"):
-            # keep track of addresses, return
-            # back to procedure call
+    #def _return(self):
+    #    # keep track of addresses, return
+    #    # back to procedure call
+
+    def _rec_stment(self, s):
+        self.s = s
+        if (self.s == self._if):
+            self._if = 0
+            return "'if'"
+        if (self.s == self._for):
+            self._for = 0
+            return "'for'"
+        if (self.s == self._return):
+            self._return = 0
+            return "'return'"
+
+    def _for_loop(self):
+        # (
+        try:
+            if (self.next_tok_lex != "("):
+                raise ErrorToken("(", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            _skip_line()
+            return
+        else:
+            self._get_next_tok()
+        # <assignment statement>
+        try:
+            s = self._statement()
+            if (!self._assign):
+                raise ErrorToken("assignment statement", _rec_stment(s))
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            _skip_line()
+            return
+        # <expression>
+        else:
+            self._get_next_tok()
+            self._expression()
+            self._get_next_tok()
+        # )
+        try:
+            if (self.next_tok_lex != ")"):
+                raise ErrorToken(")", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            _skip_line()
+            return
+        else:
+            self._get_next_tok()
+        # <statement>
+        try:
+            if (self._statement() == None and count == 0):
+                raise ErrorToken("statement", "no statement", line_num)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            _skip_line()
+            return
+
+        if (self.next_tok_lex == "end"):
+            self._get_next_tok()
+            try:
+                if (self.next_tok_lex != "for"):
+                    raise ErrorToken("for", self.next_tok_lex)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+                _skip_line()
+                return
+            else:
+                return
 
     def _expression(self):
         i = 0
-        r = []
         print self.next_tok_typ
         print self.next_tok_lex
         while (self.next_tok_lex != ";"):
             #if ((self.next_tok_typ == "not") and (self.next_tok_typ not in reserved_ids)):
+            self._get_next_tok()
             if (self.next_tok_typ == "not"):
                 self._get_next_tok()
-                if (self.next_tok_lex not in reserved_ids)):
-                    self._get_next_tok()
-                    r.append(~self._expression())
-                    yield ~self._expression()
-                    fwrite.write("R[%i] = not(R[%i])\n" %(i, i))
-                    print r[0]
-                    continue
+                r.append(~self._expression(self._get_next_tok())
+                #yield ~self._expression()
+                # could be "notting" itself or another
+                # register before assigning to r[0], so
+                # this needs to be handled differently
+                f.write("R[%i] = not(R[%i])\n" %(i, i))
+                print r[0]
+                continue
             if (self.next_tok_typ == ")"):
                 r.append(self._arith_op())
                 return r[0]
-            if (self.next_tok_typ == "&"):
-                self._get_next_tok()
-                r.append(self._expression())
-                r[0] = r[0] & r[1]
-                fwrite.write("R[%i] = R[%i] & R[%i])\n" %(i, i, i+1))
             elif (self.next_tok_typ == "|"):
                 self._get_next_tok()
                 r.append(self._expression())
                 r[0] = r[0] | r[1]
-                fwrite.write("R[%i] = R[%i] | R[%i])\n" %(i, i, i+1))
+                f.write("R[%i] = R[%i] | R[%i])\n" %(i, i, i+1))
+            elif (self.next_tok_typ == "&"):
+                self._get_next_tok()
+                r.append(self._expression())
+                r[0] = r[0] & r[1]
+                f.write("R[%i] = R[%i] & R[%i])\n" %(i, i, i+1))
             else:
                 r[0] = r[r.__len__()-1]
                 return r[0]
 
+    def _arith_op(self):
+        r.append(self._relation())
+        if (self.next_tok_lex == "+"):
+            r[0] = r[0] + r[1]
+            f.write("R[%i] = R[%i] + R[%i]\n" %(i, i+1))
+        elif (self.next_tok_lex == "-"):
+            r[0] = r[0] - r[1]
+            f.write("R[%i] = R[%i] - R[%i]\n" %(i, i+1))
+        else:
+            return r[0]
+
+    def _relation(self):
+
+        r.append(self._term())
+        if (self.next_tok_lex == "!="):
+            if (r[0] != r[1]):
+                f.write("R[%i] != R[%i]\n" %(i, i+1))
+        elif (self.next_tok_lex == "=="):
+            if (r[0] == r[1]):
+                f.write("R[%i] == R[%i]\n" %(i, i+1))
+        elif (self.next_tok_lex == ">"):
+            if (r[0] > r[1]):
+                f.write("R[%i] > R[%i]\n" %(i, i+1))
+        elif (self.next_tok_lex == "<="):
+            if (r[0] <= r[1]):
+                f.write("R[%i] <= R[%i]\n" %(i, i+1))
+        elif (self.next_tok_lex == ">="):
+            if (r[0] >= r[1]):
+                f.write("R[%i] >= R[%i]\n" %(i, i+1))
+        elif (self.next_tok_lex == "<"):
+            if (r[0] < r[1]):
+                f.write("R[%i] < R[%i]\n" %(i, i+1))
+                return 1
+            else:
+                return 0
+        else:
+            return r[0]
+        r.append(self._relation())
+
     def _term(self):
-        factor    = _factor()
-        token_typ = factor[0]
-        token_lex = factor[1]
-        while (token_typ != -1):
-            if (token_typ ==
+        i = 0
+        r.append(self._factor())
+        #while (r[0] != -1):
+        while (self._factor() != -1):
+            if (self.next_tok_typ != "integer" or self.next_tok_typ != "float"):
                 self._get_next_tok()
-                if (self.next_tok_lex == "/" and self.next_tok_typ == "divide"):
+                continue
+            if (self.next_tok_typ == "divide"):
+                self._get_next_tok()
+                r.append(self._term())
+                r[0] = r[0] / r[1]
+                f.write("R[%i] = R[%i] / R[%i])\n" %(i, i, i+1))
+            elif (self.next_tok_typ == "mult"):
+                self._get_next_tok()
+                r.append(self._term())
+                r[0] = r[0] * r[1]
+                f.write("R[%i] = R[%i] * R[%i])\n" %(i, i, i+1))
+            else:
+                return r[0]
 
     def _factor(self):
         if (self.next_tok_lex == "false"):
-            return (self.next_tok_typ, self.next_tok_lex)
+            return self.next_tok_typ
         elif (self.next_tok_lex == "true"):
-            return (self.next_tok_typ, self.next_tok_lex)
-        elif (self.next_tok_lex == "string"):
-            return (self.next_tok_typ, self.next_tok_lex)
-        elif (self.next_tok_typ == "integer" or self.next_tok_lex == "float"):
-            return (self.next_tok_typ, self.next_tok_lex)
+            return self.next_tok_typ
+        elif (self.next_tok_typ == "string"):
+            return self.next_tok_lex
+        elif (self.next_tok_typ == "integer" or self.next_tok_typ == "float"):
+            return self.next_tok_lex
         elif (self.next_tok_typ == "id" and self.next_tok_lex not in reserved_ids):
-            return (self.next_tok_typ, self.next_tok_lex)
+            return self.next_tok_lex
         elif (self.next_tok_lex == "("):
-            return (self.next_tok_lex, self._expression())
+            return self._expression()
         else:
             return -1
 
-    def _array_delcaration(self):
+    def _array_size(self):
 
-        if (self.next_tok_lex == "integer"):
-            self._get_next_tok()
-            if (self.next_tok_typ == "]"):
-                return
+        try:
+            if (self.next_tok_lex == "integer"):
+                self._get_next_tok()
             else:
-                print_error("[syntax error]: missing closed square bracket ']'", "", line_num)
-        else:
-            print_error("[syntax error]: array size must be of type int", "", line_num)
+                raise ErrorToken("integer", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+        try:
+            if (self.next_tok_typ == "]"):
+                self._get_next_tok()
+            else:
+                raise ErrorToken("]", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+        try:
+            if (self.next_tok_lex != ";"):
+                raise ErrorToken(";", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+        return
 
     def _variable_dec(self):
-        self.var_dec = 0
-
         print self.next_tok_typ
         print self.next_tok_lex
-        # make sure token is not a reserved id
-        if (self.next_tok_lex not in reserved_ids):
-            self._get_next_tok()
+        try:
+            # make sure token is not a reserved id
+            if (self.next_tok_typ == "id" and self.next_tok_lex not in reserved_ids):
+                self._get_next_tok()
+            else:
+                raise ErrorToken("identifier", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
             # check if we have declared an array
+        try:
             if (self.next_tok_lex == "["):
                 self._get_next_tok()
-                self._array_delcaration()
-            # check for variable initialization
-            # come back to handle this
-            elif (self.next_tok_lex == ":"):
-                self._get_next_tok()
-                if (self.next_tok_lex == "="):
-                    pass
-
-            # check for end of var declaration
+                self._array_size()
             elif (self.next_tok_lex == ";"):
-                print self.next_tok_lex
-                return
-
-    #def _parameter(self):
+                return self.next_tok_lex
+            else:
+                raise ErrorToken("[ or ;", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+        return
 
     def _parameter_list(self):
-        if (self._type_mark(self.next_tok_typ)):
-            self._get_next_tok()
-            self._declaration()
-            if (self.var_dec and (self.next_tok_typ == "in" or self.next_tok_typ == "out")):
-                if (self.next_tok_lex == ","):
-                    self._get_next_tok()
-                    self._declaration()
-                elif (self.next_tok_lex == ")"):
-                    self._get_next_tok()
-                    self._procedure_body()
 
-                    return
-
-    def _procedure_dec(self):
-        if (self.next_tok_lex == "("):
-            self._get_next_tok()
-            self._parameter_list()
-
+        try:
+            if (self.next_tok_typ == self._type_mark(self.next_tok_typ)):
+                self._get_next_tok()
+                self._declaration()
+            else:
+                raise ErrorToken("data type", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
             return
+        try:
+            if (self.var_dec and (self.next_tok_typ == "in" or self.next_tok_typ == "out")):
+                self.var_dec = 0
+                self._get_next_tok()
+            else:
+                raise ErrorToken("variable declaration in/out", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+        try:
+            if (self.next_tok_lex != ","):
+                self._get_next_tok()
+                self._declaration()
+            elif (self.next_tok_lex == ")"):
+                self._get_next_tok()
+                self._procedure_body()
+            else:
+                raise ErrorToken(", or )", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+
+        return
+
+    def _procedure_header(self):
+        try:
+            if (self.next_tok_typ == "id" and self.next_tok_lex not in reserved_ids):
+                self._get_next_tok()
+            else:
+                raise ErrorToken("identifier", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+        try:
+            if (self.next_tok_lex == "("):
+                self._get_next_tok()
+                if (self.next_tok_lex != ")"):
+                    self._parameter_list()
+                else:
+                    return
+            else:
+                raise ErrorToken("(", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+        return
 
     def _procedure_body(self):
         #_declaration
-        _program_body()
-
+        self._program_body()
 
     def _declaration(self):
 
-        # check for variable declaration
-        if (self.next_tok_typ == self._type_mark(self.next_tok_typ)):
-            self._get_next_tok()
-            if (self.next_tok_typ == "id"):
+        try:
+            # check for variable declaration
+            if (self.next_tok_typ == self._type_mark(self.next_tok_typ)):
+                self._get_next_tok()
+                self._variable_dec()
                 self.var_dec = 1
-                return
-
-        # check for procedure declaration
-        elif (self.next_tok_typ == "procedure"):
-            if (self.next_tok_typ == "id"):
+            # check for procedure declaration
+            elif (self.next_tok_typ == "procedure"):
+                self._get_next_tok()
+                self._procedure_header()
                 self.prc_dec = 1
-                return
+            else:
+                raise ErrorToken("variable/procedure declaration", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+        return
 
-    #def _assignment(self):
-    #    if (self.next_tok_typ == "id")
-
-    #def _statement(self):
-    #    if (assignment):
-    #        self._get_next_tok()
-    #        self._assignment()
-    #    elif (if_stment):
-    #        self._get_next_tok()
-    #        self._if_statement()
-    #    elif (loop_stment):
-    #        self._get_next_tok()
+    def _assignment(self):
+        self._expression()
+        self._get_next_tok()
+        try:
+            if (self.next_tok_lex != ";"):
+                raise ErrorToken(";", self.next_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
 
     def _program_body(self):
 
-        if (self.next_tok_typ == "global"):
-            print self.next_tok_typ
-            self._get_next_tok()
-            print self.next_tok_typ
-            self._declaration()
-
-            if (self.prc_dec):
-                #self._get_next_tok()
-                self._procedure_dec()
-            elif (self.var_dec):
-                #self._get_next_tok()
-                self._variable_dec()
-
-        # make sure to handle this
-        elif (self.curr_tok_typ == "begin"):
-            if (self.var_dec or self.prc_dec):
-                print_error("[syntax error]: cannot have declarations inside 'begin' statement", "", line_num)
+        try:
+            if (self.next_tok_typ == "global"):
+                print self.next_tok_typ
+                self._get_next_tok()
+                print self.next_tok_typ
+                self._declaration()
+            elif (self.next_tok_typ == "begin"):
+                self._get_next_tok()
+                _statement()
             else:
-                pass
+                raise ErrorToken("global/begin", self.next_tok_typ)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
 
-        else:
-            print_error("[syntax error]: must be of type 'global'", "", line_num)
-
-        #while (self.next_tok_typ != "eof"): return _program_body()
-        #while (not(eof)): return _program_body()
-        #while (self.curr_tok_typ != "end" and self.next_tok_typ != "program"): return _program_body()
+        while (self.next_tok_typ != "eof"): return _program_body()
 
     def _program_header(self):
 
         print self.curr_tok_typ
-        if ((self.curr_tok_typ == "program" and self.next_tok_typ == "id")):# and not(eof)):
+        try:
+            if (self.curr_tok_typ != "program"):
+                raise ErrorToken("program", self.curr_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+        try:
+            if (self.next_tok_typ != "id")):# and not(eof)):
+                raise ErrorToken("id", self.curr_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
+        else:
             print self.next_tok_lex
             self._get_next_tok()
-
-            if(self.next_tok_typ == "is"):
-                print self.next_tok_typ
-                self._get_next_tok()
-                self._program_body()
-
-                return
-            else:
-                print_error("[syntax error]: missing 'is' keyword", "", line_num)
+        try:
+            if(self.next_tok_typ != "is"):
+                raise ErrorToken("is", self.curr_tok_lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            self._skip_line()
+            return
         else:
-            print_error("[syntax error]: program header must start with 'program _id_'", "", line_num)
+            print self.next_tok_typ
+            self._get_next_tok()
+            self._program_body()
 
-        #return
+        return
 
 if (__name__ == "__main__"):
-    main()
-    parse = parser(get_tokens())
-    parse._program_header()
+    if (check_src_file()):
+        #f = open("good_test1.c")
+        parse = parser(get_tokens())
+        parse._program_header()
+    #parse._get_next_tok()
