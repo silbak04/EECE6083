@@ -246,37 +246,42 @@ def get_tokens():
 
                 if (debug): debug("esq seq: ", line_num, curr_token)
 
-                if (next_char in ["t", "n"] and next_char != "\n"):
+                if (next_char in ["t", "n"]):# and next_char != "\n"):
                     curr_token += next_char
                     get_next_char()
 
-                else:
-                    print_error("escape sequence is not supported", line_num)
+                    yield _token((token_table[curr_token], curr_token), line_num)
 
-                tokens.append((token_table[curr_token], curr_token))
+                else:
+                    curr_token += next_char
+                    get_next_char()
+                    print_error("escape sequence not supported: ", curr_token, line_num)
 
             elif (curr_char in token_table):
-                tokens.append((token_table[curr_char], curr_char))
+                yield _token((token_table[curr_char], curr_char), line_num)
                 if (debug): debug("tok table: ", line_num, curr_char)
 
             else:
-                tokens.append(("unknown_token"         , curr_char))
-                if (debug): debug("unknown tok table: ", line_num, curr_char)
+                curr_token = curr_char
+
+                print_error("unknown token: ", "'" + curr_token + "'", line_num)
+                yield _token((curr_token, curr_token), line_num)
 
         update_line_cnt()
 
-    for token in tokens:
-        print token
+    yield _token(("eof", next_char), line_num)
 
-def main():
+def check_src_file():
 
     program_file = sys.argv[1]
-    if (program_file.endswith('.ee')):
+    if (program_file.endswith('.src')):
         read_file(program_file)
-        get_tokens()
-
+        return 1
     else:
-        print "file format not recognized"
+        print "%s: file format not recognized" %(program_file)
+    return
 
 if (__name__ == "__main__"):
-    main()
+    if (check_src_file()):
+        for token in get_tokens():
+            print token
