@@ -1060,29 +1060,56 @@ class parser(object):
 
         return
 
+    # <procedure_header> :: =
+    #                     procedure <identifier>
+    #                     ( [<parameter_list>] )
     def _procedure_header(self):
+
+        print "PROCEDURE HEADER"
+
         try:
-            if (self.next_tok_typ == "id" and self.next_tok_lex not in reserved_ids):
-                self._get_next_tok()
-            else:
-                raise ErrorToken("identifier", self.next_tok_lex)
+            if (self.curr_tok.type != "id" or self.curr_tok.lex in reserved_ids):
+                raise ErrorToken("non-reserved identifier", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
+        else:
+            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+            self._get_next_tok()
+            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+
         try:
-            if (self.next_tok_lex == "("):
-                self._get_next_tok()
-                if (self.next_tok_lex != ")"):
-                    self._parameter_list()
-                else:
-                    return
-            else:
-                raise ErrorToken("(", self.next_tok_lex)
+            if (self.curr_tok.lex != "("):
+                raise ErrorToken("(", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
+        else:
+            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+            self._get_next_tok()
+            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+            self._parameter_list()
+            try:
+                if (self.curr_tok.lex != ")"):
+                    raise ErrorToken(")", self.curr_tok.lex)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
+            else:
+                self.prc_var_dec = 0
+                f.write("%s:\n" %(self.proc_name))
+
+            print "leaving procedure header going to proc bod"
+            self._get_next_tok()
+            self._procedure_body()
+            print "returned from proc body back in _procedure_header"
+
         return
 
     def _procedure_body(self):
