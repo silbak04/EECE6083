@@ -1,7 +1,8 @@
+#!/usr/bin/env python
 #
 # Copyright (C) 2014 by Samir Silbak
 #
-# Compiler Thoery - Parser
+# Compiler Thoery - Parser/Type Checker/Code Generator
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,37 +19,37 @@
 # Free Software Foundation, Inc.,
 # 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 
-# http://www.cs.engr.uky.edu/~lewis/essays/compilers/rec-des.html
-
-# http://stackoverflow.com/questions/9814528/recursive-descent-parser-implementation
-# http://stackoverflow.com/questions/1960888/register-allocation-and-spilling-the-easy-way
-
-#import scanner
-#from scanner import update_line_cnt
-#from scanner import get_tokens
 from scanner import *
 from exceps  import *
+from symbol_table import *
 
-data_types = reserved_ids[0:4]
-count = 0
 r = []
+reg = []
 
-class parser:
+i = 0
+count = 0
+if_sub_idx = -1
+for_sub_idx = -1
+
+class parser(object):
     def __init__(self, tokens):
-        self.tokens   = tokens
-        self.curr_tok = next(self.tokens)
-        self.next_tok = next(self.tokens)
+        self.tokens = tokens
 
-        self.curr_tok_typ = self.curr_tok[0]
-        self.curr_tok_lex = self.curr_tok[1]
+        self.curr_token = next(self.tokens)
 
-        self.next_tok_typ = self.next_tok[0]
-        self.next_tok_lex = self.next_tok[1]
+        self.curr_tok      = token_symbol()
+        self.curr_tok.type = self.curr_token[0]
+        self.curr_tok.lex  = self.curr_token[1]
+        self.curr_tok.line = self.curr_token[2]
 
-        self.line_num     = self.tokens[2]
+        #self.var_dec = False
+        self.prc_dec = False
+        self.prc_call = False
 
-        self.var_dec = 0
-        self.prc_dec = 0
+        self._assign = False
+        self._if     = False
+        self._for    = False
+        self._return = False
 
         self._assign = 0
         self._if     = 0
