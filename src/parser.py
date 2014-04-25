@@ -1306,35 +1306,61 @@ class parser(object):
     #                    program <identifier> is
     def _program_header(self):
 
-        print self.curr_tok_typ
+        print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
         try:
-            if (self.curr_tok_typ != "program"):
-                raise ErrorToken("program", self.curr_tok_lex)
+            if (self.curr_tok.type != "program"):
+                raise ErrorToken("program", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            self._skip_line()
-            return
-        try:
-            if (self.next_tok_typ != "id")):# and not(eof)):
-                raise ErrorToken("id", self.curr_tok_lex)
-        except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
         else:
-            print self.next_tok_lex
             self._get_next_tok()
+            print "'%s' on line: %d" %(self.curr_tok.lex, self.curr_tok.line)
+
         try:
-            if(self.next_tok_typ != "is"):
-                raise ErrorToken("is", self.curr_tok_lex)
+            if (self.curr_tok.type != "id"):# and not(eof)):
+                raise ErrorToken("id", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
         else:
-            print self.next_tok_typ
             self._get_next_tok()
+            print "'%s' on line: %d" %(self.curr_tok.lex, self.curr_tok.line)
+
+        try:
+            if (self.curr_tok.type != "is"):
+                raise ErrorToken("is", self.curr_tok.lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            self._skip_line()
+            return
+        else:
+            self._get_next_tok()
+            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
             self._program_body()
+            self.prog_body = 1
+
+        # once we have returned from the program body, we need to
+        # check to make sure the user has 'ended' the program correctly
+        try:
+            if (self.curr_tok.lex != "end"):
+                raise ErrorToken("end", self.curr_tok.lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+        try:
+            self._get_next_tok()
+            if (self.curr_tok.type != "program"):
+                raise ErrorToken("program", self.curr_tok.lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            return
 
         return
 
