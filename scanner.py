@@ -158,54 +158,67 @@ def get_tokens():
 
                 # check for type int or float
                 if ("." in curr_token):
-                    tokens.append(("float",   curr_token))
+                    yield _token(("float", curr_token), line_num)
                 else:
-                    tokens.append(("integer", curr_token))
+                    yield _token(("integer", curr_token), line_num)
 
         # check for strings
         elif (curr_char == "\""):
             curr_token = curr_char
 
-            # keep fetching the next char as long as the next char
-            # is not an end quote or an escape sequence
-            while ((next_char not in ["\"", "\\"]) and (next_char != "\n")):
+            # keep fetching the next char as long as the next char is not an
+            # end quote or an escape sequence
+            while ((next_char not in ["\"", "\\"]) and next_char != "\n"):
                 curr_token += next_char
                 get_next_char()
 
             if (debug): debug("seq: ", line_num, curr_token)
 
-            if ((next_char == "\"") and (next_char != "\n")):
+            if ((next_char == "\"")):#) and (next_char != "\n")):
                 curr_token += next_char
                 get_next_char()
-                tokens.append(("string", curr_token))
+                yield _token(("string", curr_token), line_num)
+
                 if (debug): debug("string: ", line_num, curr_token)
 
             else:
-                print_error(   "missing quote"    , line_num)
-                tokens.append(("unknown_token", curr_token))
+                print_error("missing quote", "", line_num)
+                yield _token((curr_token, curr_token), line_num)
 
         else:
 
-            # ignore white space
-            if (curr_char.isspace()):
-                pass
+            # ignore whitespace
+            if (curr_char.isspace()): pass
 
-            # check for operators - <, >, !, :
-            elif (curr_char in operators):
+            # check for equality symbol (==)
+            elif (curr_char == "=" and next_char == "="):
+                curr_token = curr_char + next_char
+                get_next_char()
+                yield _token((token_table[curr_token], curr_token), line_num)
+
+            # check for relational operators: '<, >, !, :'
+            elif (curr_char in relational_ops):
                 curr_token = curr_char
 
-                # check for <=, >=, !=, :=
+                # check for something like !asdf
+                #if (next_char.isalnum()):
+
+                # check for: '<=, >=, !=, :='
                 if (next_char == "="):
                     curr_token += next_char
                     get_next_char()
-                    tokens.append((token_table[curr_token], curr_token))
+                    yield _token((token_table[curr_token], curr_token), line_num)
 
-                # check for unsupported operators: <<, >>, !!, ::
-                if (next_char in operators):
+                # check for unsupported operators: '<<, >>, !!, ::'
+                elif (next_char in relational_ops):
                     curr_token += next_char
                     get_next_char()
-                    print_error(   "operator not supported", line_num)
-                    tokens.append(("unknown_token"         , curr_token))
+
+                    print_error("operator not supported: ", curr_token, line_num)
+                    yield _token((curr_token, curr_token), line_num)
+
+                else:
+                    yield _token((token_table[curr_token], curr_token), line_num)
 
             # check for division or comment
             elif (curr_char == "/"):
@@ -213,20 +226,19 @@ def get_tokens():
 
                 if (debug): debug("div: ", line_num, curr_token)
 
-                #while ((next_char != "/" and (next_char.isdigit() or next_char.isalnum()) and (next_char != "\n")):
-                if (next_char != "/" and next_char != "\n"):
-                    tokens.append((token_table[curr_token], curr_token))
+                if (next_char != "/"):
+                    yield _token((token_table[curr_token], curr_token), line_num)
 
                 elif (next_char == "/"):
                     while (next_char != "\n"):
                         curr_token += next_char
                         get_next_char()
 
-                    if (debug): debug("comment: ", line_num, curr_token)
-
-                    # most likely token_table will be gone, much simplier to just
-                    # pass in the strings directly
-                    tokens.append((token_table[curr_token[0:2]], curr_token))
+                    if (debug):
+                        debug("comment: ", line_num, curr_token)
+                        # most likely token_table will be gone, much simplier to just
+                        # pass in the strings directly
+                        yield _token((token_table[curr_token[0:2]], curr_token), line_num)
 
             # check for escape sequences
             elif (curr_char == "\\"):
