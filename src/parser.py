@@ -1112,43 +1112,93 @@ class parser(object):
 
         return
 
+    # <procedure_body> ::=
+    #                  ( <declaration> ; )*
+    #             begin
+    #                  ( <statement> ; )*
+    #             end procedure
     def _procedure_body(self):
-        #_declaration
-        self._program_body()
+        global i
 
-    def _declaration(self):
+        print "PROCEDURE BODY"
+        print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+        while (self.prc_dec):
+            if (self.curr_tok.type == "global"):
+                # TODO: change this...variable inside procedure needs to be
+                # local...
+                symbol_table[self.proc_name].local = 0
+                self._get_next_tok()
+                print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+                self._declaration()
+            elif (self.curr_tok.type == "begin"):
+                self._get_next_tok()
+                print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+
+                #while (self._statement() in ["id","if","else","for","return"]):
+                while (self._statement() != "None"):
+                    if (self.curr_tok.type == "end"): break
+
+                    if (self.curr_tok.lex in symbol_table.keys()):
+                        if (symbol_table[self.curr_tok.lex].procedure):
+                            self.prc_call = 1
+                    continue
+                print self.curr_tok.type
+
+            else:
+                # TODO: INCASE YOU FORGET WE SHOULD PROBABLY BE KEEPING
+                # TRACK OF PROGRAM NAME AND ADD A SYMBOL TABLE FOR PROGRAM
+                # NAME AND ALL ATTRIBUTES ASSOCIATED WITH IT
+                if (self.curr_tok.lex == "end"): break
+                # TODO: change this...variable inside procedure needs to be
+                # local...
+                symbol_table[self.proc_name].local = 1
+                self._declaration()
+                print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
 
         try:
-            # check for variable declaration
-            if (self.next_tok_typ == self._type_mark(self.next_tok_typ)):
-                self._get_next_tok()
-                self._variable_dec()
-                self.var_dec = 1
-            # check for procedure declaration
-            elif (self.next_tok_typ == "procedure"):
-                self._get_next_tok()
-                self._procedure_header()
-                self.prc_dec = 1
-            else:
-                raise ErrorToken("variable/procedure declaration", self.next_tok_lex)
+            if (self.curr_tok.lex != "end"):
+                raise ErrorToken("end", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            self._skip_line()
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            return
+        else:
+            self.prc_dec = 0
+            self._get_next_tok()
+
+        try:
+            print "AFTER EMPTRY STATEMENTS PROCEDURE=============="
+            if (self.curr_tok.type != "procedure"):
+                raise ErrorToken("procedure", self.curr_tok.lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            return
+
+        try:
+            self._get_next_tok()
+            print "AFTER EMPTRY STATEMENTS PROCEDURE=============="
+            if (self.curr_tok.lex != ";"):
+                raise ErrorToken(";", self.curr_tok.lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            return
+        else:
+            self._get_next_tok()
+            f.write("R[%i] = M[FP-2];\n" %(i))
+            f.write( "FP = M[FP-1];\
+                    \nSP = SP-1;\
+                    \nSP = SP-%i;\n" %(symbol_table[self.proc_name].param_count))
+            f.write("goto (*void*)R[%i]\n" %(i))
+            i+=1
             return
         return
 
-    def _assignment(self):
-        self._expression()
-        self._get_next_tok()
-        try:
-            if (self.next_tok_lex != ";"):
-                raise ErrorToken(";", self.next_tok_lex)
-        except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            self._skip_line()
-            return
-
-    def _program_body(self):
+    # <declaration> ::=
+    #        [ global ] <procedure_declaration>
+    # |      [ global ] <variable_declaration>
+    def _declaration(self):
 
         try:
             if (self.next_tok_typ == "global"):
