@@ -1370,11 +1370,11 @@ if (__name__ == "__main__"):
         # any code, so i need to terminate properly and make sure no code is
         # generate if error
         f = open("gen.c", "w")
-        f.write("#include \"./runtime/runtime.h\"\n")
+        f.write("#include \"../runtime/runtime.h\"\n")
         f.write("int main(void)\n")
         f.write("{\n")
         f.write("goto main;\n")
-        f.write(open("runtime/runtime_inline.c").read())
+        f.write(open("../runtime/runtime_inline.c").read())
         f.write('\n')
 
         parse = parser(get_tokens())
