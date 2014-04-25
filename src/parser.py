@@ -974,30 +974,42 @@ class parser(object):
             return
         return
 
+    #<variable_declaration> ::=
+    #                    <type_mark> <identifier>
+    #                    [ [ <array_size> ] ]
     def _variable_dec(self):
-        print self.next_tok_typ
-        print self.next_tok_lex
+
+        print "'%s, %s' on line: %d" %(self.curr_tok.type, self.curr_tok.lex, self.curr_tok.line)
+        identifier = None
         try:
             # make sure token is not a reserved id
-            if (self.next_tok_typ == "id" and self.next_tok_lex not in reserved_ids):
+            if (self.curr_tok.type == "id" and self.curr_tok.lex not in reserved_ids):
+                if (self.prc_var_dec):
+                    identifier = self.curr_tok.lex
+                    self._get_next_tok()
+                    return identifier
                 self._get_next_tok()
             else:
-                raise ErrorToken("identifier", self.next_tok_lex)
+                raise ErrorToken("identifier", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
-            # check if we have declared an array
+
         try:
-            if (self.next_tok_lex == "["):
+            # check if we have declared an array
+            if (self.curr_tok.lex == "["):
                 self._get_next_tok()
                 self._array_size()
-            elif (self.next_tok_lex == ";"):
-                return self.next_tok_lex
+            elif (self.curr_tok.lex == ";"):
+                print "'%s' on line: %d" %(self.curr_tok.lex, self.curr_tok.line)
+                return self._get_next_tok()
             else:
-                raise ErrorToken("[ or ;", self.next_tok_lex)
+                raise ErrorToken("'[' or ';'", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
         return
