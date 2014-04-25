@@ -71,41 +71,25 @@ def update_line_cnt():
 
     return line_num
 
-def print_error(error_message, line):
+def _token((tok, lex), line_num):
+    return (tok, lex, line_num)
 
-    red     = '\033[31m'
-    default = '\033[0m'
+def debug(message, line, tok):
 
-    print red + "[error]: " + default + "%s on line: %i" % (error_message, line)
+    print message,"\t" + tok, "\t\t" + str(line)
     return
-
-def print_warning(warning_message, line):
-
-    yellow  = '\033[93m'
-    default = '\033[0m'
-
-    print yellow + "[warning]: " + default + "%s on line: %i" % (warning_message, line)
-    return
-
-def debug(message, l, tok):
-    print message,"\t" + tok, "\t\t" + str(l)
 
 def get_tokens():
     global line_num
+    global reserved_ids
 
-    error        = 0
-    debug        = 0
+    error          = 0
+    debug          = 0
 
-    curr_token   = ""
-    reserved_ids = ['string'   , 'integer', 'bool'  , 'float'  ,
-                    'global'   , 'in'     , 'out'   , 'if'     ,
-                    'then'     , 'else'   , 'is'    , 'for'    ,
-                    'not'      , 'true'   , 'false' , 'program',
-                    'procedure', 'begin'  , 'return', 'end'    ]
+    curr_token     = ""
 
-    operators    = ["<", ">", "!", ":"]
+    relational_ops = ["<", ">", "!", ":"]
 
-    #while not(next_char is None):
     while (next_char is not(None)):
 
         get_next_char()
