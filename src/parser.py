@@ -175,93 +175,217 @@ class parser(object):
             self._check_for_semicolon()
             return self._get_next_tok()
 
-        if (self.token_type in data_types):
-            return self.token_type
-        else:
-            return 0
+        if (self.curr_tok.type == "return"):
+            try:
+                if (self.prc_dec == 0):
+                    raise ErrorToken("return", self.curr_tok.lex)
+            except ErrorToken, e:
+                e.print_error("was not expecting: '%s' outside of procedure, received: '%s' on line: %i" \
+                                                   %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
 
-    def _skip_line(self):
-        while (next_char != "\n" or next_char != "\r\n"):
+            count = 1
             self._get_next_tok()
-            continue
-        return
 
-    # might change everything to y combinators
-    def _if_statement(self):
+            self._check_for_semicolon()
+            return self._get_next_tok()
+
+        if (self.curr_tok.type == "id" and self.prc_call):
+            print "PROCEDURE CALL"
+            self._get_next_tok()
+            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+            num_args = self._argument_list()
+            try:
+                if (self.curr_tok.lex != ")"):
+                    raise ErrorToken(")", self.curr_tok.lex)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
+            else:
+                f.write("/* calling '%s' procedure */\n" %(symbol_table[self.proc_name]))
+                f.write("R[%i] = M[FP+0]\n" %(i))
+                self._get_next_tok()
+                self._check_for_semicolon()
+
+            try:
+                if (num_args != symbol_table[self.proc_name].param_count):
+                    raise ErrorToken(num_args, symbol_table[self.proc_name].param_count)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s' arguments, received: '%s' arguments on line: %i" \
+                                                                        %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
+
+            count = 1
+            self.prc_call = 0
+            return self._get_next_tok()
+        else:
+            return
+
+    # <assignment_statement> ::=
+    #           <destination> := <expression>
+
+    # <destination> ::=
+    #           <identifier> [ [ <expression> ] ]
+    def _assignment(self):
+
+        print "=================ASSIGNMENT===================="
+        print "Variable %s is getting assigned" %(self.curr_tok.lex)
+        print "value of prc call %i" %(self.prc_call)
+
+        f.write("\n/* assigned statement */\n")
+        try:
+            if (self.curr_tok.lex not in symbol_table.keys()):
+                raise ErrorToken(None, self.curr_tok.lex)
+        except ErrorToken, e:
+            e.print_error("variable: '%s' has not been delcared on line: %i" \
+                                                            %(e.rec_tok, self.curr_tok.line))
+            self._skip_line()
+            return
+
+        try:
+            #reg.append(symbol_table[self.curr_tok.lex])
+            reg.insert(0, symbol_table[self.curr_tok.lex])
+            #reg.append(symbol_table[self.curr_tok.lex])
+            #print reg[0].data_type
+            self._get_next_tok()
+            if (self.curr_tok.lex != ":="):
+                raise ErrorToken(":=", self.curr_tok.lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+        else:
+            self._get_next_tok()
+            self._assign = 1
+            count = 1
+
+            try:
+                if (self._expression() == -1):
+                    raise ErrorToken("expression", self.curr_tok.lex)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
+            else:
+                return
+
+    # <if_statement> ::=
+    #                if ( <expression> ) then ( <statement> ; )+
+    #                [ else ( <statement> ; )+ ]
+    #                end if
+    def _if_statement(self, if_sub_idx):
+
         # (
         try:
-            if (self.next_tok_lex != "("):
-                raise ErrorToken("(", self.next_tok_lex)
+            if (self.curr_tok.lex != "("):
+                raise ErrorToken("(", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            # better just keep parsing, makes 0 sense
-            # to skip line--handle it later
-            _skip_line()
-            return
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            _if_error(1)
+
         # <expression>
         else:
             self._get_next_tok()
-            self._expression()
-            self._get_next_tok()
+            if (self.curr_tok.lex not in symbol_table.keys()):
+                symbol_table[self.curr_tok.lex] = self.curr_tok
+                symbol_table[self.curr_tok.lex].data_type = self.curr_tok.type
+                reg.insert(0, symbol_table[self.curr_tok.lex])
+
+            try:
+                if (self._expression() == -1):
+                    raise ErrorToken("expression", self.curr_tok.lex)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            else:
+                self._expression()
+
         # )
         try:
-            if (self.next_tok_lex != ")"):
-                raise ErrorToken(")", self.next_tok_lex)
+            if (self.curr_tok.lex != ")"):
+                raise ErrorToken(")", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            _skip_line()
-            return
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            _if_error(2)
         else:
             self._get_next_tok()
+
         # then
         try:
-            if (self.next_tok_typ != "then"):
-                raise ErrorToken("then", self.next_tok_lex)
+            if (self.curr_tok.type != "then"):
+                raise ErrorToken("then", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            _skip_line()
-            return
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            _if_error(3)
+
         # <statement>
         else:
-            self._get_next_tok()
-            #self._statement()
+            print "getting statement"
+            print self._get_next_tok().lex
+            f.write("if (R[%i] == 0) goto if_subroutine_%i;\n" %(i, if_sub_idx))
+
             try:
+                # make sure the we have at least 1 statement
                 if (self._statement() == None and count == 0):
                     #raise ErrorToken("missing statement after 'then' in 'if' block", "", line_num)
                     raise ErrorToken("statement", "no statement")
             except ErrorToken, e:
-                e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-                _skip_line()
-                return
-            #else:
-            self._get_next_tok()
-            if (self.next_tok_lex == "end"):
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                _if_error(4)
+
+            else:
+                self._statement()
+
+            if (self.curr_tok.type == "else"):
+                f.write("goto if_subroutine_%i;\n" %(if_sub_idx+1))
+                f.write("if_subroutine_%i:\n"      %(if_sub_idx))
+                if_sub_idx+=1
+
                 self._get_next_tok()
-                try:
-                    if (self.next_tok_lex != "if"):
-                        raise ErrorToken("if", self.next_tok_lex)
-                except ErrorToken, e:
-                    e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-                    _skip_line()
-                    return
-            elif (self.next_tok_typ == "else"):
+
                 try:
                     if (self._statement() == None and count == 0):
                         #raise ErrorToken("missing statement after 'then' in 'if' block", "", line_num)
                         raise ErrorToken("statement", "no statement")
                 except ErrorToken, e:
-                    e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-                    _skip_line()
-                    return
-                if (self.next_tok_lex == "end"):
-                    self._get_next_tok()
-                    try:
-                        if (self.next_tok_lex != "if"):
-                            raise ErrorToken("if", self.next_tok_lex)
-                    except ErrorToken, e:
-                        e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-                        _skip_line()
-                        return
+                    e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                                  %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                    _if_error(5)
+                else:
+                    self._statement()
+
+                f.write("if_subroutine_%i:\n" %(if_sub_idx))
+
+            #else:
+            #    f.write("subroutine_%i:\n" %(if_sub_idx))
+
+            if (self.curr_tok.lex == "end"):
+                print "end test"
+                self._get_next_tok()
+                try:
+                    if (self.curr_tok.lex != "if"):
+                        raise ErrorToken("if", self.curr_tok.lex)
+                except ErrorToken, e:
+                    e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                                  %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                    _if_error(6)
+                else:
+                    return self._get_next_tok()
+
+    # <loop_statement> ::=
+    #                 for ( <assignment_statement> ;
+    #                      <expression> )
+    #                       ( <statement> ; )*
+    #                 end for
+    def _for_loop(self, for_sub_idx):
 
     def _statement(self):
         global count
