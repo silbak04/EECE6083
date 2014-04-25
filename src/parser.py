@@ -61,15 +61,19 @@ class parser(object):
         return
 
     def _get_next_tok(self):
-        #self.curr_tok_typ = self.next_tok_typ
-        #self.curr_tok_lex = self.next_tok_lex
 
-        self.next_tok     = next(self.tokens);
-        self.next_tok_typ = self.next_tok[0]
-        self.next_tok_lex = self.next_tok[1]
+        self.curr_token    = next(self.tokens)
+        self.curr_tok      = token_symbol()
+        self.curr_tok.type = self.curr_token[0]
+        self.curr_tok.lex  = self.curr_token[1]
+        self.curr_tok.line = self.curr_token[2]
 
-        self.line_num     = self.next_tok[2]
+        return self.curr_tok
 
+    def _skip_line(self):
+        while (next_char != "\n"):
+            self._get_next_tok()
+            continue
         return
 
     def _type_mark(self, token_type):
