@@ -412,36 +412,59 @@ class parser(object):
 
         # <expression>
         else:
-            self._get_next_tok()
-            self._expression()
-            self._get_next_tok()
+            print "BEFORE GOING TO EXPRESSION!!!!!!!!!!!!!!!!!!!!!!!!!"
+            print self.curr_tok.lex
+            print "BEFORE GOING TO EXPRESSION!!!!!!!!!!!!!!!!!!!!!!!!!"
+            if (self.curr_tok.lex not in symbol_table.keys()):
+                symbol_table[self.curr_tok.lex] = self.curr_tok
+                symbol_table[self.curr_tok.lex].data_type = self.curr_tok.type
+                #reg.append(symbol_table[self.curr_tok.lex])
+                reg.insert(0, symbol_table[self.curr_tok.lex])
+
+            f.write("if (R[%i] == 0) goto for_subroutine_%i:\n" %(i, for_sub_idx))
+            try:
+                if (self._expression() == -1):
+                    raise ErrorToken("expression", self.curr_tok.lex)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
+            else:
+                self._expression()
+
         # )
         try:
-            if (self.next_tok_lex != ")"):
-                raise ErrorToken(")", self.next_tok_lex)
+            if (self.curr_tok.lex != ")"):
+                raise ErrorToken(")", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            _skip_line()
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            self._skip_line()
             return
         else:
             self._get_next_tok()
+
         # <statement>
         try:
             if (self._statement() == None and count == 0):
                 raise ErrorToken("statement", "no statement", line_num)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            _skip_line()
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            self._skip_line()
             return
 
-        if (self.next_tok_lex == "end"):
+        # TODO: add try/except...
+        if (self.curr_tok.lex == "end"):
             self._get_next_tok()
             try:
-                if (self.next_tok_lex != "for"):
-                    raise ErrorToken("for", self.next_tok_lex)
+                if (self.curr_tok.lex != "for"):
+                    raise ErrorToken("for", self.curr_tok.lex)
             except ErrorToken, e:
-                e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-                _skip_line()
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
                 return
             else:
                 return
