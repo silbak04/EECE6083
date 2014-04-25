@@ -76,8 +76,104 @@ class parser(object):
             continue
         return
 
-    def _type_mark(self, token_type):
-        self.token_type = token_type
+    def _check_for_semicolon(self):
+        try:
+            if (self.curr_tok.lex != ";"):
+                raise ErrorToken(";", self.curr_tok.lex)
+        except ErrorToken, e:
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            self._skip_line()
+            return
+
+    def _if_error(self, error):
+        # TODO: change how this is whole function is handled
+        self.error = error
+        self._get_next_tok()
+        '''
+        if we get an error of 1, this means that we did not receive '('
+        token, so check for expression, keep parsing then return from error,
+        go back to if statement, try to parse the next correct token so we do
+        not have to be redundant in here and reparse everything.  if we get
+        an error back in 'if' block and it's none of these cases, then we're
+        just going to go ahead and skip the whole line
+        '''
+        if (self.error == 1):
+            self._expression()
+            return self._get_next_tok()
+        # error 2: we did not receive ')' token after expression, get next
+        # 'correct' token, return back to _if_statement and try to keep parsing
+        if (self.error == 2):
+          return self._get_next_tok()
+        if (self.error == 3):
+          return self._get_next_tok()
+        if (self.error == 4):
+          return self._get_next_tok()
+        if (self.error == 5):
+            return self._get_next_tok()
+        if (self.error == 6):
+            return self._get_next_tok()
+        if (self.error == 7):
+            return self._get_next_tok()
+
+    # <statement> ::= <assignment_statement>
+    #               | <if_statement>
+    #               | <loop_statement>
+    #               | <return_statement>
+    #               | <procedure_call>
+    def _statement(self):
+        global count
+        global i
+        global if_sub_idx
+        global for_sub_idx
+
+        # check for assignment
+        if (not(self.prc_call) and (self.curr_tok.type == "id") and
+           (self.curr_tok.lex not in reserved_ids)):
+            self._assignment()
+
+            # assignment is done, assign register to memory location
+            if (self.prc_dec):
+                i+=1
+                f.write("R[%i] = M[FP+%i];\n" %(i, symbol_table[reg[0].lex].address))
+                f.write("M[R[%i]] = R[%i];\n" %(i, i-1))
+                i+=1
+            else:
+                f.write("M[FP+%i] = R[%i];\n" %(symbol_table[reg[0].lex].address, i))
+
+            #reg[0].value = int(r[0])
+            self._check_for_semicolon()
+            a = self._get_next_tok()
+            print "=================================="
+            print "NEXT TOKEN BEFORE LEAVING STATEMENT"
+            print a.lex
+            print "=================================="
+            return a.lex
+            #return self._get_next_tok()
+
+        if (self.curr_tok.type == "if"):
+            self._get_next_tok()
+            if_sub_idx+=1
+
+            f.write("\n/* if statement */\n")
+
+            count = 1
+            self._if_statement(if_sub_idx)
+
+            self._check_for_semicolon()
+            return self._get_next_tok()
+
+        if (self.curr_tok.type == "for"):
+            self._get_next_tok()
+            for_sub_idx+=1
+
+            f.write("\n/* for loop statement */\n")
+
+            count = 1
+            self._for_loop(for_sub_idx)
+
+            self._check_for_semicolon()
+            return self._get_next_tok()
 
         if (self.token_type in data_types):
             return self.token_type
