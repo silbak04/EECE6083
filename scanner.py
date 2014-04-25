@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 # Copyright (C) 2014 by Samir Silbak
 #
@@ -48,16 +49,16 @@ def read_file(file_read):
 def get_next_char():
     global curr_char
     global next_char
-    global index
+    global char_idx
 
-    curr_char = f_read[index]
+    curr_char = f_read[char_idx]
 
-    if (index+1 == len(f_read)):
+    if (char_idx+1 == len(f_read)):
         next_char = None
     else:
-        next_char = f_read[index+1]
+        next_char = f_read[char_idx+1]
 
-    index += 1
+    char_idx += 1
 
     return curr_char, next_char, index
 
