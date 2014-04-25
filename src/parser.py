@@ -939,31 +939,37 @@ class parser(object):
         else:
             return self.data_type
 
+    # <array_size> ::= <number>
     def _array_size(self):
 
         try:
-            if (self.next_tok_lex == "integer"):
+            if (self.curr_tok.lex == "integer"):
                 self._get_next_tok()
             else:
-                raise ErrorToken("integer", self.next_tok_lex)
+                raise ErrorToken("integer", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
+
         try:
-            if (self.next_tok_typ == "]"):
+            if (self.curr_tok.type == "]"):
                 self._get_next_tok()
             else:
-                raise ErrorToken("]", self.next_tok_lex)
+                raise ErrorToken("]", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
+
         try:
-            if (self.next_tok_lex != ";"):
-                raise ErrorToken(";", self.next_tok_lex)
+            if (self.curr_tok.lex != ";"):
+                raise ErrorToken(";", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
         return
