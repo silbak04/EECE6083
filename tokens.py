@@ -1,22 +1,8 @@
-# https://www.ics.uci.edu/~pattis/ICS-31/lectures/tokens.pdf
-# http://ee.hawaii.edu/~tep/EE160/Book/chap14/subsection2.1.1.5.html
-# https://stackoverflow.com/questions/15599639/whats-perfect-counterpart-in-python-for-while-not-eof
-
-#class token_symb(set):
-#    def __getattr__(self, token):
-#        if token in self:
-#            return token
-#        raise AttributeError
-#
-#tokens = token_symb(["COMMA"])
-#tokens.COMMA = ","
-#print tokens.COMMA
-
 token_table = {
-        'string'    : 'string',
-        'int'       : 'int',
-        'bool'      : 'bool',
+        'integer'   : 'integer',
         'float'     : 'float',
+        'bool'      : 'bool',
+        'string'    : 'string',
         'global'    : 'global',
         'in'        : 'in',
         'out'       : 'out',
@@ -25,21 +11,27 @@ token_table = {
         'else'      : 'else',
         'case'      : 'case',
         'for'       : 'for',
-        'and'       : 'and',
-        'or'        : 'or',
         'not'       : 'not',
+        'is'        : 'is',
         'program'   : 'program',
         'procedure' : 'procedure',
         'begin'     : 'begin',
         'return'    : 'return',
         'end'       : 'end',
-        '_'         : 'under_score',
+        'true'      : '1',
+        'false'     : '0',
         '\''        : 'tick',
+        #'_'         : 'under_score',
+        '|'         : 'pipe',
+        '&'         : 'ampers',
         '('         : 'open_paren',
         ')'         : 'closed_paren',
         '{'         : 'open_brace',
         '}'         : 'closed_brace',
+        ']'         : 'rsqb',
+        '['         : 'lsqb',
         '='         : 'eq',
+        '=='        : 'eqeq',
         '<'         : 'lt',
         '>'         : 'gt',
         '<='        : 'lte',
@@ -48,11 +40,11 @@ token_table = {
         '!='        : 'noteq',
         '+'         : 'plus',
         '-'         : 'minus',
-        '*'         : 'star',
-        '/'         : 'slash',
+        '*'         : 'mult',
+        '/'         : 'divide',
         ','         : 'comma',
         ':'         : 'colon',
         ';'         : 'semicolon',
         '.'         : 'dot',
-        '//'        : 'double_slash'
+        '//'        : 'comment'
         }
