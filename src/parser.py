@@ -1200,19 +1200,65 @@ class parser(object):
     # |      [ global ] <variable_declaration>
     def _declaration(self):
 
+        print "DECLARATION"
         try:
-            if (self.next_tok_typ == "global"):
-                print self.next_tok_typ
+            # check for procedure declaration
+            if (self.curr_tok.type == "procedure"):
+                # create local symbol table
+                # after proc is done, destroy local sym table
                 self._get_next_tok()
-                print self.next_tok_typ
-                self._declaration()
-            elif (self.next_tok_typ == "begin"):
+
+                self.proc_name = self.curr_tok.lex
+                print "=="*40
+                print "'%s' on line: %d" %(self.proc_name, self.curr_tok.line)
+                print "=="*40
+
+                symbol_table[self.proc_name] = self.curr_tok
+                symbol_table[self.proc_name].procedure = 1
+
+                print "'%s' on line: %d" %(self.curr_tok.lex, self.curr_tok.line)
+
+                self.prc_dec = 1
+                self._procedure_header()
+
+            # check for variable declaration
+            elif (self.curr_tok.type == self._type_mark(self.curr_tok.type)):
                 self._get_next_tok()
-                _statement()
+
+                # make sure we are not declaring the same variable more than
+                # once
+                try:
+                    if (self.curr_tok.lex in symbol_table.keys()):
+                        raise ErrorToken(None, self.curr_tok.lex)
+                except ErrorToken, e:
+                    e.print_error("variable: '%s' has already been delcared on line: %i" \
+                                                                  %(e.rec_tok, self.curr_tok.line))
+                else:
+                    # fp
+                    self.curr_tok.address = self.mem_addr
+                    self.mem_addr+=1
+
+                    # add the current token in the symbol table and assign the
+                    # data type with the current token
+                    symbol_table[self.curr_tok.lex] = self.curr_tok
+                    symbol_table[self.curr_tok.lex].data_type = self.data_type
+
+                    if (self.local):
+                        symbol_table[self.curr_tok.lex].local = 0
+                    else:
+                        self.local = 0
+                        symbol_table[self.curr_tok.lex].local = 1
+
+                    print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+                    self._variable_dec()
+                    print "'%s, %s' on line: %d" %(self.curr_tok.type, self.curr_tok.lex, self.curr_tok.line)
+                    #self.var_dec = 1
+
             else:
-                raise ErrorToken("global/begin", self.next_tok_typ)
+                raise ErrorToken("variable/procedure declaration", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
 
