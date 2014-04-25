@@ -646,41 +646,298 @@ class parser(object):
     #         |  <term> / <factor>
     #         |  <factor>
     def _term(self):
-        i = 0
-        r.append(self._factor())
-        #while (r[0] != -1):
-        while (self._factor() != -1):
-            if (self.next_tok_typ != "integer" or self.next_tok_typ != "float"):
-                self._get_next_tok()
-                continue
-            if (self.next_tok_typ == "divide"):
-                self._get_next_tok()
-                r.append(self._term())
-                r[0] = r[0] / r[1]
-                f.write("R[%i] = R[%i] / R[%i])\n" %(i, i, i+1))
-            elif (self.next_tok_typ == "mult"):
-                self._get_next_tok()
-                r.append(self._term())
-                r[0] = r[0] * r[1]
-                f.write("R[%i] = R[%i] * R[%i])\n" %(i, i, i+1))
-            else:
-                return r[0]
+        global i
 
+        print "in term"
+        lhs = self._factor()
+
+        while (self.curr_tok.lex == "/" or self.curr_tok.lex == "*"):
+            if (self.curr_tok.lex == "*"):
+                print "in term: in mult before"
+
+                i+=1
+                self._get_next_tok()
+                rhs = self._factor()
+                i+=1
+
+                print "in term: in mult after"
+
+                f.write("R[%i] = R[%i] * R[%i];\n" %(i, lhs, rhs))
+                lhs = i
+
+            if (self.curr_tok.lex == "/"):
+                print "in term: in div before"
+
+                i+=1
+                self._get_next_tok()
+                rhs = self._factor()
+                i+=1
+
+                print "in term: in div after"
+
+                f.write("R[%i] = R[%i] / R[%i];\n" %(i, lhs, rhs))
+                lhs = i
+
+        return i
+
+    # <factor> ::= ( <expression> )
+    #            | [ - ] <name>
+    #            | [ - ] <number>
+    #            | <string>
+    #            | true
+    #            | false
     def _factor(self):
-        if (self.next_tok_lex == "false"):
-            return self.next_tok_typ
-        elif (self.next_tok_lex == "true"):
-            return self.next_tok_typ
-        elif (self.next_tok_typ == "string"):
-            return self.next_tok_lex
-        elif (self.next_tok_typ == "integer" or self.next_tok_typ == "float"):
-            return self.next_tok_lex
-        elif (self.next_tok_typ == "id" and self.next_tok_lex not in reserved_ids):
-            return self.next_tok_lex
-        elif (self.next_tok_lex == "("):
-            return self._expression()
+        global i
+
+        if (self.curr_tok.lex == "("):
+            print "=================GOING BACK IN EXP=================="
+            print "in factor: before exp"
+            self._get_next_tok()
+            self._expression()
+            print "in factor: after exp"
+            print "=================RETURNED FROM EXP=================="
+            try:
+                if (self.curr_tok.lex != ")"):
+                    raise ErrorToken(")", self.curr_tok.lex)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
+            else:
+                self._get_next_tok()
+                return i
+
+        # name
+        if (self.curr_tok.type == "id" and self.curr_tok.lex not in reserved_ids):
+            print "in factor: id"
+
+            try:
+                if (reg[0].value == None):
+                    raise ErrorToken("variable initialization", "uninitialized variable")
+            except ErrorToken, e:
+                e.print_warning("was expecting '%s', received: '%s' on line: %i" \
+                                                                  %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                symbol_table[self.curr_tok.lex].value = 0
+
+            try:
+                if (reg[0].data_type != symbol_table[self.curr_tok.lex].data_type):
+                #if (reg[0].data_type != self.curr_tok.data_type):
+                    raise ErrorToken(reg[0].data_type, self.curr_tok.data_type)
+            except ErrorToken, e:
+                e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
+                                                                     %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            else:
+                #r.append(reg[0].value)
+                r.insert(0, symbol_table[self.curr_tok.lex].value)
+                print "===========================NAME=========================="
+                #print "variable %s is being assigned value: %i" %(self.curr_tok.lex, int(r[0]))
+                print self.curr_tok.lex
+                #print   "R[%i] = M[%i]"    %(i, symbol_table[self.curr_tok.lex].address)
+                print   "R[%i] = %i"        %(i, int(symbol_table[self.curr_tok.lex].value))
+                f.write("R[%i] = M[FP+%i];\n" %(i+1, symbol_table[self.curr_tok.lex].address))
+                i+=1
+                #if (self.not_exp): self.not_exp = 0; f.write("R[%i] = ~R[%i];\n" %(i+1, i))
+                print "===========================NAME=========================="
+                print "RETURNING INDEX VALUE"
+                print i
+                print "RETURNING INDEX VALUE"
+                self._get_next_tok()
+                return i
+
+        # number
+        if (self.curr_tok.type == "integer" or self.curr_tok.type == "float"):
+            print "in factor: integer"
+            print "VALUE OF INDEX: %i" %(i)
+
+            try:
+                if (reg[0].data_type != self.curr_tok.type):
+                    raise ErrorToken(reg[0].data_type, self.curr_tok.type)
+            except ErrorToken, e:
+                e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
+                                                                     %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                return
+            else:
+                reg[0].value = self.curr_tok.lex
+                #f.write("R[%i] = %i;\n" %(i, int(self.curr_tok.lex)))
+                f.write("R[%i] = %d;\n" %(i, int(reg[0].value)))
+                #i+=1
+                self._get_next_tok()
+                return i
+
+        # negative name/number/expression
+        if (self.curr_tok.type == "minus"):
+            self._get_next_tok()
+            try:
+                if (self.curr_tok.type == "integer" or self.curr_tok.type == "float"):
+                    print "in factor->minus: integer"
+                    print self.curr_tok.lex
+                    if (reg[0].lex == self.curr_tok.lex):
+                        try:
+                            if (reg[0].value == None):
+                                raise ErrorToken("variable initialization", "uninitialized variable")
+                        except ErrorToken, e:
+                            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                    try:
+                        if (reg[0].data_type != self.curr_tok.type):
+                            raise ErrorToken(reg[0].data_type, self.curr_tok.type)
+                    except ErrorToken, e:
+                        e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
+                                                                             %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                    else:
+                        f.write("R[%i] = %i;\n"         %(i, int(self.curr_tok.lex)))
+                        f.write("R[%i] = -1 * R[%i];\n" %(i+1, i))
+
+                        i+=1
+                        self._get_next_tok()
+                        return i
+
+                elif (self.curr_tok.type == "id" and self.curr_tok.lex not in reserved_ids):
+                    print "in fact->minus: id"
+                    if (reg[0].lex == self.curr_tok.lex):
+                        try:
+                            if (reg[0].value == None):
+                                raise ErrorToken("variable initialization", "uninitialized variable")
+                        except ErrorToken, e:
+                            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                    try:
+                        if (reg[0].data_type != symbol_table[self.curr_tok.lex].data_type):
+                        #if (reg[0].data_type != self.curr_tok.data_type):
+                            raise ErrorToken(reg[0].data_type, self.curr_tok.data_type)
+                    except ErrorToken, e:
+                        e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
+                                                                             %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                    else:
+                        print "===========================MINUS NAME=========================="
+                        f.write("R[%i] = M[FP+%i];\n"   %(i, symbol_table[self.curr_tok.lex].address))
+                        f.write("R[%i] = -1 * R[%i];\n" %(i+1, i))
+                        print "===========================MINUS NAME=========================="
+
+                        i+=1
+                        self._get_next_tok()
+                        return i
+
+                elif (self.curr_tok.type == "("):
+                    print "in factor->minus: exp"
+                    print "=================GOING BACK IN EXP=================="
+                    self._get_next_tok()
+                    self._expression()
+                    print "=================RETURNED FROM EXP=================="
+                    try:
+                        if (self.curr_tok.lex != ")"):
+                            raise ErrorToken(")", self.curr_tok.lex)
+                    except ErrorToken, e:
+                        e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                                      %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                        self._skip_line()
+                        return
+                    else:
+                        self._get_next_tok()
+                        return i
+                else:
+                    raise ErrorToken("integer/identifier/expression", self.curr_tok.lex)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+
+        # string
+        if (self.curr_tok.type == "string"):
+            print "in factor: string"
+            try:
+                if (reg[0].data_type != self.curr_tok.type):
+                    raise ErrorToken(reg[0].data_type, self.curr_tok.type)
+            except ErrorToken, e:
+                e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
+                                                                     %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            else:
+                # TODO: needs to be handled properly...
+                #f.write("R[%i] = %i;\n" %(i, int(r[i])))
+
+                i+=1
+                self._get_next_tok()
+                return i
+
+            '''
+            try:
+                if (reg[0].data_type != symbol_table[self.curr_tok.lex].data_type):
+                    #if (reg[0].data_type != self.curr_tok.data_type):
+                    raise ErrorToken(reg[0].data_type, self.curr_tok.data_type)
+            except ErrorToken, e:
+                e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
+                                                                     %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            else:
+                r.append(reg[0].value)
+                print   "R[%i] = M[FP+%i]"    %(i, symbol_table[self.curr_tok.lex].address)
+                f.write("R[%i] = M[FP+%i];\n" %(i, symbol_table[self.curr_tok.lex].address))
+                self._get_next_tok()
+                return i
+            '''
+
+        # true
+        if (self.curr_tok.lex == "true"):
+            print "in factor: true"
+            # convert true -> 1
+            reg[0].value = 1
+            try:
+                if (reg[0].data_type == "float"):
+                    raise ErrorToken(reg[0].data_type, self.curr_tok.type)
+                    #raise ErrorToken(reserved_ids[0:3], self.curr_tok.type)
+            except ErrorToken, e:
+                e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
+                                                                     %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
+
+            if (reg[0].data_type == "integer"):
+                reg[0].data_type = "bool"
+                reg[0].lex = 0
+
+            f.write("R[%i] = %i;\n" %(i, int(reg[0].value)))
+            self._get_next_tok()
+            return i
+
+        # false
+        if (self.curr_tok.lex == "false"):
+            print "in factor: false"
+            # convert false -> 0
+            reg[0].value = 0
+            try:
+                if (reg[0].data_type == "float"):
+                    raise ErrorToken(reg[0].data_type, self.curr_tok.type)
+                    #raise ErrorToken(reserved_ids[0:3], self.curr_tok.type)
+            except ErrorToken, e:
+                e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
+                                                                     %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
+
+            if (reg[0].data_type == "integer"):
+                reg[0].data_type = "bool"
+                reg[0].lex = 0
+
+            f.write("R[%i] = %i;\n" %(i, int(reg[0].value)))
+            self._get_next_tok()
+            return i
+
+        return -1
+
+    # <type_mark> ::= integer
+    #               | float
+    #               | bool
+    #               | string
+    def _type_mark(self, data_type):
+        self.data_type = data_type
+
+        try:
+            if (self.data_type not in data_types):
+                raise ErrorToken(None, self.data_type)
+        except ErrorToken, e:
+            e.print_error("data type: '%s' is not supported on line: %i" \
+                                                                      %(e.rec_tok, self.curr_tok.line))
         else:
-            return -1
+            return self.data_type
 
     def _array_size(self):
 
