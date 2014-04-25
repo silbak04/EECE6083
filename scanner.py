@@ -98,12 +98,11 @@ def get_tokens():
         if (curr_char.isalpha()):
             curr_token = curr_char
 
-            # keep fetching the next char until it's no longer
-            # alphanumeric and we have not hit the end of a new
-            # line
-            while (next_char.isalnum() and next_char != "\n"):
+            # keep fetching the next char until it's no longer alphanumeric or
+            # "_" and we have not hit the end of a newline
+            while ((next_char.isalnum() or next_char == "_")):#(next_char != "\n" or next_char != "\r")):
                 curr_token += next_char
-                get_next_char()
+                if (get_next_char() == None): break
 
             if (debug): debug("alhpa: ", line_num, curr_token)
 
@@ -111,19 +110,18 @@ def get_tokens():
             curr_token = curr_token.lower()
 
             if (curr_token in reserved_ids):
-                tokens.append(("res_id", curr_token))
+                yield _token((curr_token, curr_token), line_num)
             else:
-                tokens.append(("id"    , curr_token))
+                yield _token(("id", curr_token), line_num)
 
         # check if char is a digit or a decmial point
         elif (curr_char.isdigit() or curr_char == "."):
             curr_token = curr_char
-            error = 0
+            error      = 0
 
-            # keep fetching the next char as long as the next
-            # char is a digit or we do not have an extra decimal
-            # point in our input stream
-            while ((next_char.isdigit() or next_char == ".") and (next_char != "\n")):
+            # keep fetching the next char as long as the next char is a digit
+            # or we do not have an extra decimal point in our input stream
+            while ((next_char.isdigit() or next_char == ".")):# and (next_char != "\n")):
 
                 # check for more than one decimal point in input stream
                 if (((next_char == ".") and (next_char not in curr_token)) or next_char.isdigit()):
@@ -143,8 +141,8 @@ def get_tokens():
 
                 if (debug): debug("err digit: ", line_num, curr_token)
 
-                print_error("unknown token"   , line_num)
-                tokens.append(("unknown_token", curr_token))
+                yield _token((curr_token, curr_token), line_num)
+                print_error("unknown token: ", curr_token, line_num)
 
             else:
 
