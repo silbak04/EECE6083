@@ -51,8 +51,9 @@ class parser(object):
         self._for    = False
         self._return = False
 
-        self.mem_addr = 0
         self.not_exp = False
+
+        self.mem_addr = 0
         self.local = False
         self.proc_name = None
         self.prc_var_dec = False
@@ -196,6 +197,7 @@ class parser(object):
             self._get_next_tok()
             print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
             num_args = self._argument_list()
+            self.sp_offset = num_args
             try:
                 if (self.curr_tok.lex != ")"):
                     raise ErrorToken(")", self.curr_tok.lex)
@@ -479,8 +481,35 @@ class parser(object):
     def _argument_list(self):
         num_of_args = 0
         while (self._get_next_tok() != ")"):
+
+            exp = self.curr_tok.lex
+            print "argggggggggggggggggggggggggggggggggggggg"
+            print exp
+            print "argggggggggggggggggggggggggggggggggggggg"
+            arg = self._expression()
             num_of_args+=1
-            self._expression()
+            print "ARGSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS"
+            #print symbol_table[self.proc_name].param_list[num_of_args-1][1]
+            print num_of_args
+            print symbol_table[self.proc_name].param_list[num_of_args-1][0]
+            print "ARGSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS"
+
+            # check to see if argument is in/out
+            if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "in" and symbol_table[exp].local:
+                print "argggggggggggggggggggggggggggggggggggggg"
+                print arg
+                print "argggggggggggggggggggggggggggggggggggggg"
+                print exp
+                print "argggggggggggggggggggggggggggggggggggggg"
+
+                f.write("R[%s] = M[FP+%s]\n" %(arg, symbol_table[exp].address))
+
+            if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "out":
+                f.write("R[%s] = FP+%s\n" %(arg, symbol_table[exp].address))
+
+            if not symbol_table[exp].local:
+                f.write("R[%s] = %s\n" %(arg, symbol_table[exp].address))
+
             if (self.curr_tok.lex == ","): continue
 
         return num_of_args
@@ -521,6 +550,8 @@ class parser(object):
 
                 f.write("R[%i] = R[%i] & R[%i];\n" %(i, lhs, rhs))
                 lhs = i
+
+            return i
 
     # <arithOp> ::= <arithOp> + <relation>
     #             | <arithOp> - <relation>
@@ -943,26 +974,26 @@ class parser(object):
     def _array_size(self):
 
         try:
-            if (self.curr_tok.lex == "integer"):
-                self._get_next_tok()
-            else:
+            if (self.curr_tok.lex != "integer"):
                 raise ErrorToken("integer", self.curr_tok.lex)
         except ErrorToken, e:
             e.print_error("was expecting '%s', received: '%s' on line: %i" \
                                                           %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
+        else:
+            self._get_next_tok()
 
         try:
-            if (self.curr_tok.type == "]"):
-                self._get_next_tok()
-            else:
+            if (self.curr_tok.type != "]"):
                 raise ErrorToken("]", self.curr_tok.lex)
         except ErrorToken, e:
             e.print_error("was expecting '%s', received: '%s' on line: %i" \
                                                           %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
+        else:
+            self._get_next_tok()
 
         try:
             if (self.curr_tok.lex != ";"):
@@ -1281,6 +1312,8 @@ class parser(object):
         elif (self.curr_tok.type == "begin"):
             self._get_next_tok()
             f.write("\nmain:\n")
+            f.write("FP = 0;\n")
+            f.write("SP = FP;\n")
             while (self._statement() != "None"):
                 if (self.curr_tok.type == "end"): break
 
