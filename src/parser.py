@@ -1366,7 +1366,19 @@ class parser(object):
 
 if (__name__ == "__main__"):
     if (check_src_file()):
-        #f = open("good_test1.c")
+        # TODO: if scanner/parser generates error, we do not want to generate
+        # any code, so i need to terminate properly and make sure no code is
+        # generate if error
+        f = open("gen.c", "w")
+        f.write("#include \"./runtime/runtime.h\"\n")
+        f.write("int main(void)\n")
+        f.write("{\n")
+        f.write("goto main;\n")
+        f.write(open("runtime/runtime_inline.c").read())
+        f.write('\n')
+
         parse = parser(get_tokens())
         parse._program_header()
-    #parse._get_next_tok()
+
+        f.write("return 0;\n")
+        f.write("}\n")
