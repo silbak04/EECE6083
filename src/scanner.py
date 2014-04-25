@@ -98,8 +98,9 @@ def get_tokens():
         if (curr_char.isalpha()):
             curr_token = curr_char
 
-            # keep fetching the next char until it's no longer alphanumeric or
-            # "_" and we have not hit the end of a newline
+            # keep fetching the next char until it's no longer
+            # alphanumeric or "_" and we have not hit the end
+            # of a newline
             while ((next_char.isalnum() or next_char == "_")):#(next_char != "\n" or next_char != "\r")):
                 curr_token += next_char
                 if (get_next_char() == None): break
@@ -119,8 +120,9 @@ def get_tokens():
             curr_token = curr_char
             error      = 0
 
-            # keep fetching the next char as long as the next char is a digit
-            # or we do not have an extra decimal point in our input stream
+            # keep fetching the next char as long as the next
+            # char is a digit or we do not have an extra decimal
+            # point in our input stream
             while ((next_char.isdigit() or next_char == ".")):# and (next_char != "\n")):
 
                 # check for more than one decimal point in input stream
@@ -166,8 +168,8 @@ def get_tokens():
         elif (curr_char == "\""):
             curr_token = curr_char
 
-            # keep fetching the next char as long as the next char is not an
-            # end quote or an escape sequence
+            # keep fetching the next char as long as the next char
+            # is not an end quote or an escape sequence
             while ((next_char not in ["\"", "\\"]) and next_char != "\n"):
                 curr_token += next_char
                 get_next_char()
@@ -226,7 +228,8 @@ def get_tokens():
 
                 if (debug): debug("div: ", line_num, curr_token)
 
-                if (next_char != "/"):
+                #while ((next_char != "/" and (next_char.isdigit() or next_char.isalnum()) and (next_char != "\n")):
+                if (next_char != "/"):# and next_char != "\n"):
                     yield _token((token_table[curr_token], curr_token), line_num)
 
                 elif (next_char == "/"):
@@ -246,37 +249,42 @@ def get_tokens():
 
                 if (debug): debug("esq seq: ", line_num, curr_token)
 
-                if (next_char in ["t", "n"] and next_char != "\n"):
+                if (next_char in ["t", "n"]):# and next_char != "\n"):
                     curr_token += next_char
                     get_next_char()
 
-                else:
-                    print_error("escape sequence is not supported", line_num)
+                    yield _token((token_table[curr_token], curr_token), line_num)
 
-                tokens.append((token_table[curr_token], curr_token))
+                else:
+                    curr_token += next_char
+                    get_next_char()
+                    print_error("escape sequence not supported: ", curr_token, line_num)
 
             elif (curr_char in token_table):
-                tokens.append((token_table[curr_char], curr_char))
+                yield _token((token_table[curr_char], curr_char), line_num)
                 if (debug): debug("tok table: ", line_num, curr_char)
 
             else:
-                tokens.append(("unknown_token"         , curr_char))
-                if (debug): debug("unknown tok table: ", line_num, curr_char)
+                curr_token = curr_char
+
+                print_error("unknown token: ", "'" + curr_token + "'", line_num)
+                yield _token((curr_token, curr_token), line_num)
 
         update_line_cnt()
 
-    for token in tokens:
-        print token
+    yield _token(("eof", next_char), line_num)
 
-def main():
+def check_src_file():
 
     program_file = sys.argv[1]
-    if (program_file.endswith('.ee')):
+    if (program_file.endswith('.src')):
         read_file(program_file)
-        get_tokens()
-
+        return 1
     else:
-        print "file format not recognized"
+        print "%s: file format not recognized" %(program_file)
+    return
 
 if (__name__ == "__main__"):
-    main()
+    if (check_src_file()):
+        for token in get_tokens():
+            print token
