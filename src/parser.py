@@ -467,41 +467,60 @@ class parser(object):
                 self._skip_line()
                 return
             else:
-                return
+                f.write("for_subroutine_%i:\n" %(for_sub_idx))
+                return self._get_next_tok()
 
+    # <procedure_call> ::=
+    #            <identifier> ( [<argument_list>] )
+
+    # <argument_list> ::=
+    #            <expression>, <argument_list>
+    #          | <expression>
+    def _argument_list(self):
+        num_of_args = 0
+        while (self._get_next_tok() != ")"):
+            num_of_args+=1
+            self._expression()
+            if (self.curr_tok.lex == ","): continue
+
+        return num_of_args
+
+    # <expression> ::= <expression> & <arithOp>
+    #                | <expression> | <arithOp>
+    #                | [ not ] <arithOp>
     def _expression(self):
-        i = 0
-        print self.next_tok_typ
-        print self.next_tok_lex
-        while (self.next_tok_lex != ";"):
-            #if ((self.next_tok_typ == "not") and (self.next_tok_typ not in reserved_ids)):
+        global i
+        print "'%s, %s' on line: %d" %(self.curr_tok.type, self.curr_tok.lex, self.curr_tok.line)
+        print "in exp"
+
+        if (self.curr_tok.lex == "not"):
             self._get_next_tok()
-            if (self.next_tok_typ == "not"):
+            self.not_exp = 1;
+
+        lhs = self._arith_op()
+        if (self.not_exp):
+            self.not_exp = 0
+            i+=1
+            f.write("R[%i] = ~R[%i];\n" %(i, lhs))
+            lhs = i
+
+        while (self.curr_tok.lex == "&" or self.curr_tok.lex == "|"):
+            if (self.curr_tok.lex == "|"):
+                i+=1
                 self._get_next_tok()
-                r.append(~self._expression(self._get_next_tok())
-                #yield ~self._expression()
-                # could be "notting" itself or another
-                # register before assigning to r[0], so
-                # this needs to be handled differently
-                f.write("R[%i] = not(R[%i])\n" %(i, i))
-                print r[0]
-                continue
-            if (self.next_tok_typ == ")"):
-                r.append(self._arith_op())
-                return r[0]
-            elif (self.next_tok_typ == "|"):
+                rhs = self._arith_op()
+                i+=1
+
+                lhs = i
+
+            elif (self.curr_tok.lex == "&"):
+                i+=1
                 self._get_next_tok()
-                r.append(self._expression())
-                r[0] = r[0] | r[1]
-                f.write("R[%i] = R[%i] | R[%i])\n" %(i, i, i+1))
-            elif (self.next_tok_typ == "&"):
-                self._get_next_tok()
-                r.append(self._expression())
-                r[0] = r[0] & r[1]
-                f.write("R[%i] = R[%i] & R[%i])\n" %(i, i, i+1))
-            else:
-                r[0] = r[r.__len__()-1]
-                return r[0]
+                rhs = self._arith_op()
+                i+=1
+
+                f.write("R[%i] = R[%i] & R[%i];\n" %(i, lhs, rhs))
+                lhs = i
 
     def _arith_op(self):
         r.append(self._relation())
