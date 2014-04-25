@@ -51,10 +51,12 @@ class parser(object):
         self._for    = False
         self._return = False
 
-        self._assign = 0
-        self._if     = 0
-        self._for    = 0
-        self._return = 0
+        self.mem_addr = 0
+        self.not_exp = False
+        self.local = False
+        self.proc_name = None
+        self.prc_var_dec = False
+        self.prog_body = False
 
         return
 
