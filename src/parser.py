@@ -522,45 +522,129 @@ class parser(object):
                 f.write("R[%i] = R[%i] & R[%i];\n" %(i, lhs, rhs))
                 lhs = i
 
+    # <arithOp> ::= <arithOp> + <relation>
+    #             | <arithOp> - <relation>
+    #             | <relation>
     def _arith_op(self):
-        r.append(self._relation())
-        if (self.next_tok_lex == "+"):
-            r[0] = r[0] + r[1]
-            f.write("R[%i] = R[%i] + R[%i]\n" %(i, i+1))
-        elif (self.next_tok_lex == "-"):
-            r[0] = r[0] - r[1]
-            f.write("R[%i] = R[%i] - R[%i]\n" %(i, i+1))
-        else:
-            return r[0]
+        global i
 
+        print "in arith"
+        lhs = self._relation()
+
+        while (self.curr_tok.lex == "+" or self.curr_tok.lex == "-"):
+            if (self.curr_tok.lex == "+"):
+                print "in arith: in plus before"
+
+                i+=1
+                self._get_next_tok()
+                rhs = self._relation()
+                i+=1
+
+                print "in arith: in plus after"
+
+                f.write("R[%i] = R[%i] + R[%i];\n" %(i, lhs, rhs))
+                lhs = i
+
+            if (self.curr_tok.lex == "-"):
+                print "in arith: in minus before"
+
+                i+=1
+                self._get_next_tok()
+                rhs = self._relation()
+                i+=1
+
+                print "in arith: in minus after"
+
+                f.write("R[%i] = R[%i] - R[%i];\n" %(i, lhs, rhs))
+                lhs = i
+
+        return i
+
+    # <relation> ::= <relation> < <term>
+    #              | <relation> >= <term>
+    #              | <relation> <= <term>
+    #              | <relation> > <term>
+    #              | <relation> == <term>
+    #              | <relation> != <term>
+    #              | <term>
     def _relation(self):
+        global i
 
-        r.append(self._term())
-        if (self.next_tok_lex == "!="):
-            if (r[0] != r[1]):
-                f.write("R[%i] != R[%i]\n" %(i, i+1))
-        elif (self.next_tok_lex == "=="):
-            if (r[0] == r[1]):
-                f.write("R[%i] == R[%i]\n" %(i, i+1))
-        elif (self.next_tok_lex == ">"):
-            if (r[0] > r[1]):
-                f.write("R[%i] > R[%i]\n" %(i, i+1))
-        elif (self.next_tok_lex == "<="):
-            if (r[0] <= r[1]):
-                f.write("R[%i] <= R[%i]\n" %(i, i+1))
-        elif (self.next_tok_lex == ">="):
-            if (r[0] >= r[1]):
-                f.write("R[%i] >= R[%i]\n" %(i, i+1))
-        elif (self.next_tok_lex == "<"):
-            if (r[0] < r[1]):
-                f.write("R[%i] < R[%i]\n" %(i, i+1))
-                return 1
-            else:
-                return 0
-        else:
-            return r[0]
-        r.append(self._relation())
+        print "in relation"
+        lhs = self._term()
 
+        while (self.curr_tok.lex in ["!=", "==", ">", "<=", ">=", "<"]):
+            if (self.curr_tok.lex == "!="):
+                print "in rel: in !="
+
+                i+=1
+                self._get_next_tok()
+                rhs = self._term()
+                i+=1
+
+                f.write("R[%i] = R[%i] != R[%i];\n" %(i, lhs, rhs))
+                lhs = i
+
+            elif (self.curr_tok.lex == "=="):
+                print "in rel: in =="
+
+                i+=1
+                self._get_next_tok()
+                rhs = self._term()
+                i+=1
+
+                f.write("R[%i] = R[%i] == R[%i];\n" %(i, lhs, rhs))
+                lhs = i
+
+            elif (self.curr_tok.lex == ">"):
+                print "in rel: in >"
+
+                i+=1
+                self._get_next_tok()
+                rhs = self._term()
+                i+=1
+
+                f.write("R[%i] = R[%i] > R[%i];\n" %(i, lhs, rhs))
+                lhs = i
+
+            elif (self.curr_tok.lex == "<="):
+                print "in rel: in <="
+
+                i+=1
+                self._get_next_tok()
+                rhs = self._term()
+                i+=1
+
+                f.write("R[%i] = R[%i] <= R[%i];\n" %(i, lhs, rhs))
+                lhs = i
+
+            elif (self.curr_tok.lex == ">="):
+                print "in rel: in >="
+
+                i+=1
+                self._get_next_tok()
+                rhs = self._term()
+                i+=1
+
+                f.write("R[%i] = R[%i] >= R[%i];\n" %(i, lhs, rhs))
+                lhs = i
+
+            elif (self.curr_tok.lex == "<"):
+                print "in rel: in <"
+
+                i+=1
+                self._get_next_tok()
+                rhs = self._term()
+                i+=1
+
+                f.write("R[%i] = R[%i] < R[%i];\n" %(i, lhs, rhs))
+                lhs = i
+
+        return i
+
+    # <term> ::= <term> * <factor>
+    #         |  <term> / <factor>
+    #         |  <factor>
     def _term(self):
         i = 0
         r.append(self._factor())
