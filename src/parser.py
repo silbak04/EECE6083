@@ -1261,9 +1261,49 @@ class parser(object):
                                                           %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
+        return self.curr_tok
 
-        while (self.next_tok_typ != "eof"): return _program_body()
+    # <program_body> ::=
+    #                ( <declaration> ; )*
+    #            begin
+    #                ( <statement> ; )*
+    #            end program
+    def _program_body(self):
 
+        print "PROGRAM BODY"
+        print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+        if (self.curr_tok.type == "global"):
+            self.local = 0
+            self._get_next_tok()
+            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+            self._declaration()
+
+        elif (self.curr_tok.type == "begin"):
+            self._get_next_tok()
+            f.write("\nmain:\n")
+            while (self._statement() != "None"):
+                if (self.curr_tok.type == "end"): break
+
+                # check to see if current statement is a procedure call
+                if (self.curr_tok.lex in symbol_table.keys()):
+                    if (symbol_table[self.curr_tok.lex].procedure):
+                        self.prc_call = 1
+
+                if (self.prc_call):
+                    f.write("SP = SP + %d;\n" %(symbol_table[self.proc_name].param_count))
+
+                continue
+            return
+
+        else:
+            self.local = 1
+            self._declaration()
+
+        if (self.curr_tok.type != "eof"): return self._program_body()
+        #while (self.prog_body): return self._program_body()
+
+    # <program_header> ::=
+    #                    program <identifier> is
     def _program_header(self):
 
         print self.curr_tok_typ
