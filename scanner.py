@@ -60,13 +60,14 @@ def get_next_char():
 
     char_idx += 1
 
-    return curr_char, next_char, index
+    return next_char
 
 def update_line_cnt():
     global line_num
 
-    if (next_char == "\n" or next_char == "\r\n"):
-        line_num += 1
+    # some of test files provided were done in windows...
+    if (next_char == "\r"): get_next_char()
+    if (next_char == "\n"): line_num += 1
 
     return line_num
 
