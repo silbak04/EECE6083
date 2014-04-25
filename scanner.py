@@ -17,19 +17,27 @@
 # along with this program; if not, write to the
 # Free Software Foundation, Inc.,
 # 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+#
 
 import os
 import sys
 
 from tokens import token_table as token_table
+from printer import *
 
-index     = 0
+char_idx  = 0
 line_num  = 1
 
 curr_char = ""
 next_char = ""
 
-tokens    = []
+reserved_ids = ['string'    , 'integer' , 'bool'   , 'float'    ,
+                'global'    , 'in'      , 'out'    , 'if'       ,
+                'then'      , 'else'    , 'is'     , 'for'      ,
+                'not'       , 'true'    , 'false'  , 'program'  ,
+                'procedure' , 'begin'   , 'return' , 'end'      ]
+
+data_types = reserved_ids[0:4]
 
 def read_file(file_read):
     global f_read
