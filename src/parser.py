@@ -387,86 +387,29 @@ class parser(object):
     #                 end for
     def _for_loop(self, for_sub_idx):
 
-    def _statement(self):
-        global count
-        # look for next token after 'id'->':='
-        if ((self.next_tok_typ == "id")             and
-            (self.next_tok_lex not in reserved_ids) and
-            (~self.prc_dec)):
-            self._get_next_tok()
-            self._assign = 1
-            count = 1
-            return self._assign
-            #self._expression()
-            #self._assignment()
-            #return 1
-        elif (self.next_tok_typ == "if"):
-            self._get_next_tok()
-            self._if_statement()
-            self._if = 2
-            count = 1
-            return self._if
-            #return 2
-        elif (self.next_tok_typ == "for"):
-            self._get_next_tok()
-            self._for_loop()
-            self._for = 3
-            count = 1
-            return self._for
-            #return 3
-        elif (self.next_tok_typ == "return"):
-            self._get_next_tok()
-            self._return = 4
-            count = 1
-            return self._return
-            #self._return()
-            #return 4
-        elif (self.next_tok_typ == "id" and self.prc_dec):
-            self._get_next_tok()
-            self._procedure_body()
-            self.prc_dec = 5
-            count = 1
-            return self.prc_dec
-            #return 5
-        else:
-            return None
-
-    #def _return(self):
-    #    # keep track of addresses, return
-    #    # back to procedure call
-
-    def _rec_stment(self, s):
-        self.s = s
-        if (self.s == self._if):
-            self._if = 0
-            return "'if'"
-        if (self.s == self._for):
-            self._for = 0
-            return "'for'"
-        if (self.s == self._return):
-            self._return = 0
-            return "'return'"
-
-    def _for_loop(self):
         # (
         try:
-            if (self.next_tok_lex != "("):
-                raise ErrorToken("(", self.next_tok_lex)
+            if (self.curr_tok.lex != "("):
+                raise ErrorToken("(", self.curr_tok.lex)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            _skip_line()
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            self._skip_line()
             return
         else:
             self._get_next_tok()
+
         # <assignment statement>
         try:
-            s = self._statement()
-            if (!self._assign):
-                raise ErrorToken("assignment statement", _rec_stment(s))
+            self._statement()
+            if (not(self._assign)):
+                raise ErrorToken("assignment statement", None)
         except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            _skip_line()
+            e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+            self._skip_line()
             return
+
         # <expression>
         else:
             self._get_next_tok()
