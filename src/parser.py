@@ -1014,41 +1014,49 @@ class parser(object):
             return
         return
 
+    #<parameter_list> ::=
+    #                  <parameter> , <parameter_list>
+    #                | <parameter>
+
+    #<parameter> ::= <variable_declaration> (in | out)
     def _parameter_list(self):
 
-        try:
-            if (self.next_tok_typ == self._type_mark(self.next_tok_typ)):
-                self._get_next_tok()
-                self._declaration()
+        print "PARAMETER LIST"
+        print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+        data_type = None
+        identifier = None
+        num_parameters = 0
+
+        while (self.curr_tok.lex != ")" and self.curr_tok.lex != "\n"):
+            try:
+                if (self.curr_tok.type != self._type_mark(self.curr_tok.type)):
+                    raise ErrorToken("data type", self.curr_tok.lex)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
             else:
-                raise ErrorToken("data type", self.next_tok_lex)
-        except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            self._skip_line()
-            return
-        try:
-            if (self.var_dec and (self.next_tok_typ == "in" or self.next_tok_typ == "out")):
-                self.var_dec = 0
+                data_type = self.data_type
+                self.prc_var_dec = 1
                 self._get_next_tok()
+                identifier = self._variable_dec()
+
+            try:
+                if ((self.curr_tok.type != "in" and self.curr_tok.type != "out")):
+                    raise ErrorToken("variable declaration in/out", self.curr_tok.lex)
+            except ErrorToken, e:
+                e.print_error("was expecting '%s', received: '%s' on line: %i" \
+                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                self._skip_line()
+                return
             else:
-                raise ErrorToken("variable declaration in/out", self.next_tok_lex)
-        except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            self._skip_line()
-            return
-        try:
-            if (self.next_tok_lex != ","):
+                num_parameters+=1
+                symbol_table[self.proc_name].param_list.append((data_type, identifier, self.curr_tok.type))
+                symbol_table[self.proc_name].param_count = num_parameters
                 self._get_next_tok()
-                self._declaration()
-            elif (self.next_tok_lex == ")"):
-                self._get_next_tok()
-                self._procedure_body()
-            else:
-                raise ErrorToken(", or )", self.next_tok_lex)
-        except ErrorToken, e:
-            e.print_error("was expecting '%s', received: '%s' on line: %i" %(e.exp_tok, e.rec_tok, self.line_num))
-            self._skip_line()
-            return
+
+            if (self.curr_tok.lex == ","): self._get_next_tok()
 
         return
 
