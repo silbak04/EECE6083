@@ -26,6 +26,8 @@ import sys
 from tokens import token_table as token_table
 from printer import *
 
+char_cnt  = 0
+
 char_idx  = 0
 line_num  = 1
 
@@ -166,18 +168,20 @@ def get_tokens():
 
         # check for strings
         elif (curr_char == "\""):
-            curr_token = curr_char
+            #global char_cnt
+            curr_token = ""
 
             # keep fetching the next char as long as the next char
             # is not an end quote or an escape sequence
             while ((next_char not in ["\"", "\\"]) and next_char != "\n"):
                 curr_token += next_char
+                #char_cnt=char_cnt+1
                 get_next_char()
 
             if (debug): debug("seq: ", line_num, curr_token)
 
             if ((next_char == "\"")):#) and (next_char != "\n")):
-                curr_token += next_char
+                #curr_token += next_char
                 get_next_char()
                 yield _token(("string", curr_token), line_num)
 
