@@ -1229,7 +1229,7 @@ class parser(object):
                                                           %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             return
         else:
-            self.prc_dec = 0
+            self.proc_dec = 0
             self._get_next_tok()
 
         try:
@@ -1252,11 +1252,12 @@ class parser(object):
             return
         else:
             self._get_next_tok()
-            f.write("R[%i] = M[FP-2];\n" %(i))
-            f.write( "FP = M[FP-1];\
-                    \nSP = SP-1;\
-                    \nSP = SP-%i;\n" %(symbol_table[self.proc_name].param_count))
-            f.write("goto (*void*)R[%i]\n" %(i))
+            f.write(indent+"R[%i] = M[FP-2];\n" %(i))
+            f.write(indent+"FP = M[FP-1];\n")
+            f.write(indent+"SP = SP-1;\n")
+            f.write(indent+"SP = SP-%i;\n" %(symbol_table[self.proc_name].param_count))
+            f.write(indent+"SP = SP-2;\n")
+            f.write(indent+"goto *(void*)R[%i];\n" %(i))
             i+=1
             return
         return
@@ -1284,7 +1285,7 @@ class parser(object):
 
                 print "'%s' on line: %d" %(self.curr_tok.lex, self.curr_tok.line)
 
-                self.prc_dec = 1
+                self.proc_dec = 1
                 self._procedure_header()
 
             # check for variable declaration
@@ -1310,10 +1311,10 @@ class parser(object):
                     symbol_table[self.curr_tok.lex].data_type = self.data_type
 
                     if (self.local):
-                        symbol_table[self.curr_tok.lex].local = 0
+                        symbol_table[self.curr_tok.lex].local = 1
                     else:
                         self.local = 0
-                        symbol_table[self.curr_tok.lex].local = 1
+                        symbol_table[self.curr_tok.lex].local = 0
 
                     print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
                     self._variable_dec()
@@ -1335,6 +1336,7 @@ class parser(object):
     #                ( <statement> ; )*
     #            end program
     def _program_body(self):
+        global i
 
         print "PROGRAM BODY"
         print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
@@ -1463,9 +1465,8 @@ if (__name__ == "__main__"):
         # generate if error
         f = open("gen.c", "w")
         f.write("#include \"../runtime/runtime.h\"\n")
-        f.write("int main(void)\n")
-        f.write("{\n")
-        f.write("goto main;\n")
+        f.write("int main(void) {\n")
+        f.write(indent+"goto main;\n")
         f.write(open("../runtime/runtime_inline.c").read())
         f.write('\n')
 
