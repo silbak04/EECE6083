@@ -1180,11 +1180,35 @@ class parser(object):
                 while (self._statement() != "None"):
                     if (self.curr_tok.type == "end"): break
 
+                    if self.curr_tok.lex in ['putinteger', 'putbool', 'putstring', 'putfloat']:
+                        if (self.curr_tok.lex not in symbol_table.keys()):
+                            self.proc_call = 1
+                            self.proc_name = self.curr_tok.lex
+                            symbol_table[self.curr_tok.lex] = token_symbol()
+                            symbol_table[self.curr_tok.lex].type = 'procedure'
+                            symbol_table[self.curr_tok.lex].lex  = 'procedure'
+                            symbol_table[self.curr_tok.lex].param_list.append([self.curr_tok.lex[3:], '', 'in'])
+
+                        i+=1
+                        self._predefined_proc = 1
+
+                    if self.curr_tok.lex in ['getinteger', 'getbool', 'getstring', 'getfloat']:
+                        if self.curr_tok.lex in symbol_table.keys():
+                            self.proc_call = 1
+                            self.proc_name = self.curr_tok.lex
+                            symbol_table[self.curr_tok.lex] = token_symbol()
+                            symbol_table[self.curr_tok.lex].type = 'procedure'
+                            symbol_table[self.curr_tok.lex].lex  = 'procedure'
+                            symbol_table[self.curr_tok.lex].param_list.append([self.curr_tok.lex[3:], '', 'out'])
+
+                        i+=1
+                        self._predefined_proc = 1
+
                     if (self.curr_tok.lex in symbol_table.keys()):
                         if (symbol_table[self.curr_tok.lex].procedure):
-                            self.prc_call = 1
+                            self.proc_call = 1
+
                     continue
-                print self.curr_tok.type
 
             else:
                 # TODO: INCASE YOU FORGET WE SHOULD PROBABLY BE KEEPING
@@ -1323,18 +1347,42 @@ class parser(object):
         elif (self.curr_tok.type == "begin"):
             self._get_next_tok()
             f.write("\nmain:\n")
-            f.write("FP = 0;\n")
-            f.write("SP = FP;\n")
+            f.write(indent+"FP = 0;\n")
+            f.write(indent+"SP = FP;\n")
             while (self._statement() != "None"):
                 if (self.curr_tok.type == "end"): break
+
+                if self.curr_tok.lex in ['putinteger', 'putbool', 'putstring', 'putfloat']:
+                    if (self.curr_tok.lex not in symbol_table.keys()):
+                        self.proc_call = 1
+                        self.proc_name = self.curr_tok.lex
+                        symbol_table[self.curr_tok.lex] = token_symbol()
+                        symbol_table[self.curr_tok.lex].type = 'procedure'
+                        symbol_table[self.curr_tok.lex].lex  = 'procedure'
+                        symbol_table[self.curr_tok.lex].param_list.append([self.curr_tok.lex[3:], '', 'in'])
+
+                    i+=1
+                    self._predefined_proc = 1
+
+                if self.curr_tok.lex in ['getinteger', 'getbool', 'getstring', 'getfloat']:
+                    if self.curr_tok.lex in symbol_table.keys():
+                        self.proc_call = 1
+                        self.proc_name = self.curr_tok.lex
+                        symbol_table[self.curr_tok.lex] = token_symbol()
+                        symbol_table[self.curr_tok.lex].type = 'procedure'
+                        symbol_table[self.curr_tok.lex].lex  = 'procedure'
+                        symbol_table[self.curr_tok.lex].param_list.append([self.curr_tok.lex[3:], '', 'out'])
+
+                    i+=1
+                    self._predefined_proc = 1
 
                 # check to see if current statement is a procedure call
                 if (self.curr_tok.lex in symbol_table.keys()):
                     if (symbol_table[self.curr_tok.lex].procedure):
-                        self.prc_call = 1
+                        self.proc_call = 1
 
-                if (self.prc_call):
-                    f.write("SP = SP + %d;\n" %(symbol_table[self.proc_name].param_count))
+                if self.proc_call and not self._predefined_proc:
+                    f.write(indent+"SP = SP + %d;\n" %symbol_table[self.proc_name].param_count)
 
                 continue
             return
