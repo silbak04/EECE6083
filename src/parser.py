@@ -557,29 +557,28 @@ class parser(object):
         lhs = self._arith_op()
         if (self.not_exp):
             self.not_exp = 0
+            f.write(indent+"R[%i] = ~R[%i];\n" %(lhs, lhs-1))
             i+=1
-            f.write("R[%i] = ~R[%i];\n" %(i, lhs))
             lhs = i
 
         while (self.curr_tok.lex == "&" or self.curr_tok.lex == "|"):
             if (self.curr_tok.lex == "|"):
-                i+=1
                 self._get_next_tok()
                 rhs = self._arith_op()
-                i+=1
 
+                f.write(indent+"R[%i] = R[%i] | R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
             elif (self.curr_tok.lex == "&"):
-                i+=1
                 self._get_next_tok()
                 rhs = self._arith_op()
-                i+=1
 
-                f.write("R[%i] = R[%i] & R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] & R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
-            return i
+        return i
 
     # <arithOp> ::= <arithOp> + <relation>
     #             | <arithOp> - <relation>
@@ -594,27 +593,25 @@ class parser(object):
             if (self.curr_tok.lex == "+"):
                 print "in arith: in plus before"
 
-                i+=1
                 self._get_next_tok()
                 rhs = self._relation()
-                i+=1
 
                 print "in arith: in plus after"
 
-                f.write("R[%i] = R[%i] + R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] + R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
             if (self.curr_tok.lex == "-"):
                 print "in arith: in minus before"
 
-                i+=1
                 self._get_next_tok()
                 rhs = self._relation()
-                i+=1
 
                 print "in arith: in minus after"
 
-                f.write("R[%i] = R[%i] - R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] - R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
         return i
@@ -636,67 +633,61 @@ class parser(object):
             if (self.curr_tok.lex == "!="):
                 print "in rel: in !="
 
-                i+=1
                 self._get_next_tok()
                 rhs = self._term()
-                i+=1
 
-                f.write("R[%i] = R[%i] != R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] != R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
             elif (self.curr_tok.lex == "=="):
                 print "in rel: in =="
 
-                i+=1
                 self._get_next_tok()
                 rhs = self._term()
-                i+=1
 
-                f.write("R[%i] = R[%i] == R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] == R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
             elif (self.curr_tok.lex == ">"):
                 print "in rel: in >"
 
-                i+=1
                 self._get_next_tok()
                 rhs = self._term()
-                i+=1
 
-                f.write("R[%i] = R[%i] > R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] > R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
             elif (self.curr_tok.lex == "<="):
                 print "in rel: in <="
 
-                i+=1
                 self._get_next_tok()
                 rhs = self._term()
-                i+=1
 
-                f.write("R[%i] = R[%i] <= R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] <= R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
             elif (self.curr_tok.lex == ">="):
                 print "in rel: in >="
 
-                i+=1
                 self._get_next_tok()
                 rhs = self._term()
-                i+=1
 
-                f.write("R[%i] = R[%i] >= R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] >= R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
             elif (self.curr_tok.lex == "<"):
                 print "in rel: in <"
 
-                i+=1
                 self._get_next_tok()
                 rhs = self._term()
-                i+=1
 
-                f.write("R[%i] = R[%i] < R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] < R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
         return i
@@ -714,27 +705,25 @@ class parser(object):
             if (self.curr_tok.lex == "*"):
                 print "in term: in mult before"
 
-                i+=1
                 self._get_next_tok()
                 rhs = self._factor()
-                i+=1
 
                 print "in term: in mult after"
 
-                f.write("R[%i] = R[%i] * R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] * R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
             if (self.curr_tok.lex == "/"):
                 print "in term: in div before"
 
-                i+=1
                 self._get_next_tok()
                 rhs = self._factor()
-                i+=1
 
                 print "in term: in div after"
 
-                f.write("R[%i] = R[%i] / R[%i];\n" %(i, lhs, rhs))
+                f.write(indent+"R[%i] = R[%i] / R[%i];\n" %(i, lhs-1, rhs-1))
+                i+=1
                 lhs = i
 
         return i
@@ -794,14 +783,15 @@ class parser(object):
                 print self.curr_tok.lex
                 #print   "R[%i] = M[%i]"    %(i, symbol_table[self.curr_tok.lex].address)
                 print   "R[%i] = %i"        %(i, int(symbol_table[self.curr_tok.lex].value))
-                f.write("R[%i] = M[FP+%i];\n" %(i+1, symbol_table[self.curr_tok.lex].address))
+                if not self.proc_args:
+                    f.write(indent+"R[%i] = M[FP+%i];\n" %(i, symbol_table[self.curr_tok.lex].address))
                 i+=1
-                #if (self.not_exp): self.not_exp = 0; f.write("R[%i] = ~R[%i];\n" %(i+1, i))
+                #if (self.not_exp): self.not_exp = 0; f.write(indent+"R[%i] = ~R[%i];\n" %(i+1, i))
                 print "===========================NAME=========================="
                 print "RETURNING INDEX VALUE"
                 print i
                 print "RETURNING INDEX VALUE"
-                self._get_next_tok()
+                print self._get_next_tok().lex
                 return i
 
         # number
@@ -818,9 +808,9 @@ class parser(object):
                 return
             else:
                 reg[0].value = self.curr_tok.lex
-                #f.write("R[%i] = %i;\n" %(i, int(self.curr_tok.lex)))
-                f.write("R[%i] = %d;\n" %(i, int(reg[0].value)))
-                #i+=1
+                #f.write(indent+"R[%i] = %i;\n" %(i, int(self.curr_tok.lex)))
+                f.write(indent+"R[%i] = %d;\n" %(i, int(reg[0].value)))
+                i+=1
                 self._get_next_tok()
                 return i
 
@@ -845,9 +835,9 @@ class parser(object):
                         e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
                                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
                     else:
-                        f.write("R[%i] = %i;\n"         %(i, int(self.curr_tok.lex)))
-                        f.write("R[%i] = -1 * R[%i];\n" %(i+1, i))
-
+                        f.write(indent+"R[%i] = %i;\n"         %(i, int(self.curr_tok.lex)))
+                        i+=1
+                        f.write(indent+"R[%i] = -1 * R[%i];\n" %(i, i-1))
                         i+=1
                         self._get_next_tok()
                         return i
@@ -870,8 +860,9 @@ class parser(object):
                                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
                     else:
                         print "===========================MINUS NAME=========================="
-                        f.write("R[%i] = M[FP+%i];\n"   %(i, symbol_table[self.curr_tok.lex].address))
-                        f.write("R[%i] = -1 * R[%i];\n" %(i+1, i))
+                        f.write(indent+"R[%i] = M[FP+%i];\n"   %(i, symbol_table[self.curr_tok.lex].address))
+                        i+=1
+                        f.write(indent+"R[%i] = -1 * R[%i];\n" %(i, i-1))
                         print "===========================MINUS NAME=========================="
 
                         i+=1
@@ -903,36 +894,26 @@ class parser(object):
 
         # string
         if (self.curr_tok.type == "string"):
+            size = 100
+            symbol_table[self.var].size = size
             print "in factor: string"
             try:
-                if (reg[0].data_type != self.curr_tok.type):
-                    raise ErrorToken(reg[0].data_type, self.curr_tok.type)
+                if (symbol_table[self.var].data_type != self.curr_tok.type):
+                    raise ErrorToken(self.var.data_type, self.curr_tok.type)
             except ErrorToken, e:
                 e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
                                                                      %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             else:
-                # TODO: needs to be handled properly...
-                #f.write("R[%i] = %i;\n" %(i, int(r[i])))
+                for i,c in enumerate(self.curr_tok.lex):
+                    f.write(indent+"tmp_string[%s] = '%s';\n" % (i,c))
+
+                f.write(indent+"tmp_string[%s] = '\\0';\n" % (i+1))
+                f.write(indent+"memcpy(&M[FP+%s], tmp_string, MAX_STR_LEN);\n" % symbol_table[self.var].address)
+                f.write(indent+"SP = SP + %d;\n" % symbol_table[self.var].size)
 
                 i+=1
                 self._get_next_tok()
                 return i
-
-            '''
-            try:
-                if (reg[0].data_type != symbol_table[self.curr_tok.lex].data_type):
-                    #if (reg[0].data_type != self.curr_tok.data_type):
-                    raise ErrorToken(reg[0].data_type, self.curr_tok.data_type)
-            except ErrorToken, e:
-                e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
-                                                                     %(e.exp_tok, e.rec_tok, self.curr_tok.line))
-            else:
-                r.append(reg[0].value)
-                print   "R[%i] = M[FP+%i]"    %(i, symbol_table[self.curr_tok.lex].address)
-                f.write("R[%i] = M[FP+%i];\n" %(i, symbol_table[self.curr_tok.lex].address))
-                self._get_next_tok()
-                return i
-            '''
 
         # true
         if (self.curr_tok.lex == "true"):
@@ -953,7 +934,8 @@ class parser(object):
                 reg[0].data_type = "bool"
                 reg[0].lex = 0
 
-            f.write("R[%i] = %i;\n" %(i, int(reg[0].value)))
+            f.write(indent+"R[%i] = %i;\n" %(i, int(reg[0].value)))
+            i+=1
             self._get_next_tok()
             return i
 
@@ -976,7 +958,8 @@ class parser(object):
                 reg[0].data_type = "bool"
                 reg[0].lex = 0
 
-            f.write("R[%i] = %i;\n" %(i, int(reg[0].value)))
+            f.write(indent+"R[%i] = %i;\n" %(i, int(reg[0].value)))
+            i+=1
             self._get_next_tok()
             return i
 
@@ -1074,8 +1057,8 @@ class parser(object):
         return
 
     #<parameter_list> ::=
-    #                  <parameter> , <parameter_list>
-    #                | <parameter>
+    #                    <parameter> , <parameter_list>
+    #                  | <parameter>
 
     #<parameter> ::= <variable_declaration> (in | out)
     def _parameter_list(self):
