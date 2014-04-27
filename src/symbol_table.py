@@ -9,8 +9,7 @@ class token_symbol:
         self.line = None
         self.p_in = None
         self.p_out = None
-        #array size
-        self.a_size = None
+        self.array_size = None
         self.label = None
         self.data_type = None
         self.r_addr = None
@@ -22,3 +21,4 @@ class token_symbol:
         self.local = None
         self.param_list = []
         self.param_count = None
+        self.size = None
