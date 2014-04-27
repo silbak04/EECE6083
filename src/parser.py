@@ -1094,7 +1094,7 @@ class parser(object):
                 return
             else:
                 num_parameters+=1
-                symbol_table[self.proc_name].param_list.append((data_type, identifier, self.curr_tok.type))
+                symbol_table[self.proc_name].param_list.append([data_type, identifier, self.curr_tok.type])
                 symbol_table[self.proc_name].param_count = num_parameters
                 self._get_next_tok()
 
@@ -1164,7 +1164,7 @@ class parser(object):
 
         print "PROCEDURE BODY"
         print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
-        while (self.prc_dec):
+        while (self.proc_dec):
             if (self.curr_tok.type == "global"):
                 # TODO: change this...variable inside procedure needs to be
                 # local...
