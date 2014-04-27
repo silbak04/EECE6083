@@ -271,9 +271,9 @@ class parser(object):
 
         print "=================ASSIGNMENT===================="
         print "Variable %s is getting assigned" %(self.curr_tok.lex)
-        print "value of prc call %i" %(self.prc_call)
+        print "value of prc call %i" %(self.proc_call)
 
-        f.write("\n/* assigned statement */\n")
+        f.write("\n"+indent+"/* assigned statement */\n")
         try:
             if (self.curr_tok.lex not in symbol_table.keys()):
                 raise ErrorToken(None, self.curr_tok.lex)
@@ -366,7 +366,7 @@ class parser(object):
         else:
             print "getting statement"
             print self._get_next_tok().lex
-            f.write("if (R[%i] == 0) goto if_subroutine_%i;\n" %(i, if_sub_idx))
+            f.write(indent+"if (R[%i] == 0) goto if_subroutine_%i;\n" %(i, if_sub_idx))
 
             try:
                 # make sure the we have at least 1 statement
@@ -382,8 +382,8 @@ class parser(object):
                 self._statement()
 
             if (self.curr_tok.type == "else"):
-                f.write("goto if_subroutine_%i;\n" %(if_sub_idx+1))
-                f.write("if_subroutine_%i:\n"      %(if_sub_idx))
+                f.write(indent+"goto if_subroutine_%i;\n" %(if_sub_idx+1))
+                f.write(indent+"if_subroutine_%i:\n"      %(if_sub_idx))
                 if_sub_idx+=1
 
                 self._get_next_tok()
@@ -399,10 +399,10 @@ class parser(object):
                 else:
                     self._statement()
 
-                f.write("if_subroutine_%i:\n" %(if_sub_idx))
+                f.write(indent+"if_subroutine_%i:\n" %(if_sub_idx))
 
             #else:
-            #    f.write("subroutine_%i:\n" %(if_sub_idx))
+            #    f.write(indent+"subroutine_%i:\n" %(if_sub_idx))
 
             if (self.curr_tok.lex == "end"):
                 print "end test"
@@ -458,7 +458,7 @@ class parser(object):
                 #reg.append(symbol_table[self.curr_tok.lex])
                 reg.insert(0, symbol_table[self.curr_tok.lex])
 
-            f.write("if (R[%i] == 0) goto for_subroutine_%i:\n" %(i, for_sub_idx))
+            f.write(indent+"if (R[%i] == 0) goto for_subroutine_%i:\n" %(i, for_sub_idx))
             try:
                 if (self._expression() == -1):
                     raise ErrorToken("expression", self.curr_tok.lex)
@@ -492,7 +492,6 @@ class parser(object):
             self._skip_line()
             return
 
-        # TODO: add try/except...
         if (self.curr_tok.lex == "end"):
             self._get_next_tok()
             try:
@@ -504,7 +503,7 @@ class parser(object):
                 self._skip_line()
                 return
             else:
-                f.write("for_subroutine_%i:\n" %(for_sub_idx))
+                f.write(indent+"for_subroutine_%i:\n" %(for_sub_idx))
                 return self._get_next_tok()
 
     # <procedure_call> ::=
