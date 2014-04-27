@@ -25,6 +25,7 @@ from symbol_table import *
 
 r = []
 reg = []
+indent = '    '
 
 i = 0
 count = 0
@@ -43,8 +44,11 @@ class parser(object):
         self.curr_tok.line = self.curr_token[2]
 
         #self.var_dec = False
-        self.prc_dec = False
-        self.prc_call = False
+        self.proc_dec = False
+        self.proc_call = False
+        self.proc_args = False
+        self.sp_offset = 0
+        self._predefined_proc = None
 
         self._assign = False
         self._if     = False
@@ -52,6 +56,7 @@ class parser(object):
         self._return = False
 
         self.not_exp = False
+        self.var = None
 
         self.mem_addr = 0
         self.local = False
