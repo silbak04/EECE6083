@@ -514,39 +514,33 @@ class parser(object):
     #          | <expression>
     def _argument_list(self):
         num_of_args = 0
-        while (self._get_next_tok() != ")"):
+        self._get_next_tok()
+        while (self.curr_tok.lex != ")"):
+
+            num_of_args+=1
+            self.proc_args = 1
 
             exp = self.curr_tok.lex
-            print "argggggggggggggggggggggggggggggggggggggg"
-            print exp
-            print "argggggggggggggggggggggggggggggggggggggg"
             arg = self._expression()
-            num_of_args+=1
-            print "ARGSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS"
-            #print symbol_table[self.proc_name].param_list[num_of_args-1][1]
-            print num_of_args
-            print symbol_table[self.proc_name].param_list[num_of_args-1][0]
-            print "ARGSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS"
 
-            # check to see if argument is in/out
+            # check to see if procedure call is one we have predefined for runtime
+            if (self._predefined_proc):
+                symbol_table[self.proc_name].param_list[0][1] = self.curr_tok.lex
+                symbol_table[self.proc_name].param_count = num_of_args
+
+            # check to see if argument is in/out and local/global
             if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "in" and symbol_table[exp].local:
-                print "argggggggggggggggggggggggggggggggggggggg"
-                print arg
-                print "argggggggggggggggggggggggggggggggggggggg"
-                print exp
-                print "argggggggggggggggggggggggggggggggggggggg"
+                f.write(indent+"R[%s] = M[FP+%s];\n" %(arg-1, symbol_table[exp].address))
 
-                f.write("R[%s] = M[FP+%s]\n" %(arg, symbol_table[exp].address))
-
-            if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "out":
-                f.write("R[%s] = FP+%s\n" %(arg, symbol_table[exp].address))
+            if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "out" and symbol_table[exp].local:
+                f.write(indent+"R[%s] = FP+%s;\n" %(arg-1, symbol_table[exp].address))
 
             if not symbol_table[exp].local:
-                f.write("R[%s] = %s\n" %(arg, symbol_table[exp].address))
+                f.write(indent+"R[%s] = %s;\n" %(arg-1, symbol_table[exp].address))
 
-            if (self.curr_tok.lex == ","): continue
+            if (self.curr_tok.lex == ","): self._get_next_tok(); continue
 
-        return num_of_args
+        return arg, num_of_args
 
     # <expression> ::= <expression> & <arithOp>
     #                | <expression> | <arithOp>
