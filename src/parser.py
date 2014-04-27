@@ -133,19 +133,21 @@ class parser(object):
         global if_sub_idx
         global for_sub_idx
 
+        self.var = self.curr_tok.lex
+
         # check for assignment
-        if (not(self.prc_call) and (self.curr_tok.type == "id") and
+        if (not(self.proc_call) and (self.curr_tok.type == "id") and
            (self.curr_tok.lex not in reserved_ids)):
             self._assignment()
 
             # assignment is done, assign register to memory location
-            if (self.prc_dec):
-                i+=1
-                f.write("R[%i] = M[FP+%i];\n" %(i, symbol_table[reg[0].lex].address))
-                f.write("M[R[%i]] = R[%i];\n" %(i, i-1))
+            if (self.proc_dec):
+                #i+=1
+                f.write(indent+"R[%i] = M[FP+%i];\n" %(i, symbol_table[reg[0].lex].address))
+                f.write(indent+"M[R[%i]] = R[%i];\n" %(i, i-1))
                 i+=1
             else:
-                f.write("M[FP+%i] = R[%i];\n" %(symbol_table[reg[0].lex].address, i))
+                f.write(indent+"M[FP+%i] = R[%i];\n" %(symbol_table[reg[0].lex].address, i-1))
 
             #reg[0].value = int(r[0])
             self._check_for_semicolon()
@@ -161,7 +163,7 @@ class parser(object):
             self._get_next_tok()
             if_sub_idx+=1
 
-            f.write("\n/* if statement */\n")
+            f.write("\n"+indent+"/* if statement */\n")
 
             count = 1
             self._if_statement(if_sub_idx)
@@ -173,7 +175,7 @@ class parser(object):
             self._get_next_tok()
             for_sub_idx+=1
 
-            f.write("\n/* for loop statement */\n")
+            f.write("\n"+indent+"/* for loop statement */\n")
 
             count = 1
             self._for_loop(for_sub_idx)
@@ -183,7 +185,7 @@ class parser(object):
 
         if (self.curr_tok.type == "return"):
             try:
-                if (self.prc_dec == 0):
+                if (self.proc_dec == 0):
                     raise ErrorToken("return", self.curr_tok.lex)
             except ErrorToken, e:
                 e.print_error("was not expecting: '%s' outside of procedure, received: '%s' on line: %i" \
@@ -197,12 +199,22 @@ class parser(object):
             self._check_for_semicolon()
             return self._get_next_tok()
 
-        if (self.curr_tok.type == "id" and self.prc_call):
+        if (self.curr_tok.type == "id" and self.proc_call):
             print "PROCEDURE CALL"
             self._get_next_tok()
             print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
-            num_args = self._argument_list()
-            self.sp_offset = num_args
+            f.write(indent+"/* calling '%s' procedure */\n" %(self.proc_name))
+
+            arg, num_args = self._argument_list()
+            print "NUMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
+            print num_args
+            print "NUMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
+            self.sp_offset = arg - num_args
+
+            print "NUMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
+            print self.sp_offset
+            print "NUMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
+
             try:
                 if (self.curr_tok.lex != ")"):
                     raise ErrorToken(")", self.curr_tok.lex)
@@ -212,8 +224,7 @@ class parser(object):
                 self._skip_line()
                 return
             else:
-                f.write("/* calling '%s' procedure */\n" %(symbol_table[self.proc_name]))
-                f.write("R[%i] = M[FP+0]\n" %(i))
+                self.proc_args = 0
                 self._get_next_tok()
                 self._check_for_semicolon()
 
@@ -221,13 +232,32 @@ class parser(object):
                 if (num_args != symbol_table[self.proc_name].param_count):
                     raise ErrorToken(num_args, symbol_table[self.proc_name].param_count)
             except ErrorToken, e:
-                e.print_error("was expecting '%s' arguments, received: '%s' arguments on line: %i" \
+                e.print_error("was expecting '%s' argument(s), received: '%s' argument(s) on line: %i" \
                                                                         %(e.exp_tok, e.rec_tok, self.curr_tok.line))
                 self._skip_line()
                 return
+            else:
+                #i+=1
+                f.write(indent+"R[%s] = (int)&&return_from_%s;\n" %(i, self.proc_name))
+                f.write(indent+"M[SP] = R[%s];\n" %(i))
+                f.write(indent+"SP++;\n")
+                i+=1
+                f.write(indent+"R[%s] = FP;\n" %(i))
+                f.write(indent+"M[SP] = R[%s];\n" %(i))
+                f.write(indent+"SP++;\n")
+                f.write(indent+"FP = SP;\n")
+                while self.sp_offset < arg:
+                    f.write(indent+"M[SP] = R[%s];\n" %(self.sp_offset))
+                    f.write(indent+"SP++;\n")
+                    self.sp_offset+=1
+
+                self.sp_offset = 0
+                f.write(indent+"goto %s;\n" %(self.proc_name))
+                f.write(indent+"return_from_%s:\n" %(self.proc_name))
 
             count = 1
-            self.prc_call = 0
+            self.proc_call = 0
+            self._predefined_proc = None
             return self._get_next_tok()
         else:
             return
