@@ -791,20 +791,21 @@ class parser(object):
             print "in factor: id"
 
             try:
-                if (reg[0].value == None):
+                if not self._assign:
                     raise ErrorToken("variable initialization", "uninitialized variable")
             except ErrorToken, e:
                 e.print_warning("was expecting '%s', received: '%s' on line: %i" \
-                                                                  %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                                                                      %(e.exp_tok, e.rec_tok, self.curr_tok.line))
                 symbol_table[self.curr_tok.lex].value = 0
 
             try:
-                if (reg[0].data_type != symbol_table[self.curr_tok.lex].data_type):
-                #if (reg[0].data_type != self.curr_tok.data_type):
-                    raise ErrorToken(reg[0].data_type, self.curr_tok.data_type)
+                if self._assign:
+                    if (reg[0].data_type != symbol_table[self.curr_tok.lex].data_type):
+                    #if (reg[0].data_type != self.curr_tok.data_type):
+                        raise ErrorToken(reg[0].data_type, self.curr_tok.data_type)
             except ErrorToken, e:
                 e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
-                                                                     %(e.exp_tok, e.rec_tok, self.curr_tok.line))
+                                                                         %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             else:
                 #r.append(reg[0].value)
                 r.insert(0, symbol_table[self.curr_tok.lex].value)
@@ -812,7 +813,7 @@ class parser(object):
                 #print "variable %s is being assigned value: %i" %(self.curr_tok.lex, int(r[0]))
                 print self.curr_tok.lex
                 #print   "R[%i] = M[%i]"    %(i, symbol_table[self.curr_tok.lex].address)
-                print   "R[%i] = %i"        %(i, int(symbol_table[self.curr_tok.lex].value))
+                print   "R[%i] = %s"        %(i, symbol_table[self.curr_tok.lex].value)
                 if not self.proc_args:
                     f.write(indent+"R[%i] = M[FP+%i];\n" %(i, symbol_table[self.curr_tok.lex].address))
                 i+=1
@@ -838,8 +839,11 @@ class parser(object):
                 return
             else:
                 reg[0].value = self.curr_tok.lex
-                #f.write(indent+"R[%i] = %i;\n" %(i, int(self.curr_tok.lex)))
-                f.write(indent+"R[%i] = %d;\n" %(i, int(reg[0].value)))
+                if self.curr_tok.type == "float":
+                    f.write(indent+"tmp_float = %s;\n" % reg[0].value)
+                    f.write(indent+"memcpy(&R[%s], &tmp_float, sizeof(float));\n" % i)
+                else:
+                    f.write(indent+"R[%i] = %s;\n" % (i, reg[0].value))
                 i+=1
                 self._get_next_tok()
                 return i
