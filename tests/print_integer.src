@@ -1,0 +1,6 @@
+program print_integer is
+    integer a;
+begin
+    a := 4;
+    putInteger(a);
+end program;

@@ -1,0 +1,7 @@
+program print_string is
+    //string a;
+begin
+    //a := "hello world";
+    //putString(a);
+    putString("hello world");
+end program;
