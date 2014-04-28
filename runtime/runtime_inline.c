@@ -50,6 +50,8 @@ getfloat:
 getstring:
     getString();
     memcpy(&M[M[FP]], tmp_string, MAX_STR_LEN);
+    M[M[FP]] = HP;
+    HP -= 100;
     R[0] = M[FP-2];
     FP = M[FP-1];
     SP = SP - 3;

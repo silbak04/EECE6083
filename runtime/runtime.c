@@ -5,6 +5,7 @@ int R[NUM_REGS];
 int M[MEM_SIZE];
 int SP = 0;
 int FP = 0;
+int HP = MEM_SIZE - 1;
 float tmp_float;
 char tmp_string[MAX_STR_LEN];
 
