@@ -49,6 +49,7 @@ class parser(object):
         self.proc_args = False
         self.sp_offset = 0
         self._predefined_proc = None
+        self.string_proc = 0
 
         self._assign = False
         self._if     = False
@@ -63,6 +64,7 @@ class parser(object):
         self.proc_name = None
         self.prc_var_dec = False
         self.prog_body = False
+        self.label_idx = 0
 
         return
 
@@ -91,6 +93,34 @@ class parser(object):
                                                           %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
+
+    def _built_in_procedure(self):
+
+        if self.curr_tok.lex in ['putinteger', 'putbool', 'putstring', 'putfloat']:
+            if self.curr_tok.lex == "putstring": self.string_proc = 1
+
+            if self.curr_tok.lex not in symbol_table.keys():
+                symbol_table[self.curr_tok.lex] = token_symbol()
+                symbol_table[self.curr_tok.lex].type = 'procedure'
+                symbol_table[self.curr_tok.lex].lex  = 'procedure'
+                symbol_table[self.curr_tok.lex].param_list.append([self.curr_tok.lex[3:], '', 'in'])
+
+            self.proc_call = 1
+            self._predefined_proc = 1
+            self.proc_name = self.curr_tok.lex
+
+        if self.curr_tok.lex in ['getinteger', 'getbool', 'getstring', 'getfloat']:
+            if self.curr_tok.lex not in symbol_table.keys():
+                symbol_table[self.curr_tok.lex] = token_symbol()
+                symbol_table[self.curr_tok.lex].type = 'procedure'
+                symbol_table[self.curr_tok.lex].lex  = 'procedure'
+                symbol_table[self.curr_tok.lex].param_list.append([self.curr_tok.lex[3:], '', 'out'])
+
+            self.proc_call = 1
+            self._predefined_proc = 1
+            self.proc_name = self.curr_tok.lex
+
+        return
 
     def _if_error(self, error):
         # TODO: change how this is whole function is handled
@@ -1176,33 +1206,15 @@ class parser(object):
                 self._get_next_tok()
                 print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
 
+                # set up/check for built in procedures
+                self._built_in_procedure()
+
                 #while (self._statement() in ["id","if","else","for","return"]):
                 while (self._statement() != "None"):
                     if (self.curr_tok.type == "end"): break
 
-                    if self.curr_tok.lex in ['putinteger', 'putbool', 'putstring', 'putfloat']:
-                        if (self.curr_tok.lex not in symbol_table.keys()):
-                            self.proc_call = 1
-                            self.proc_name = self.curr_tok.lex
-                            symbol_table[self.curr_tok.lex] = token_symbol()
-                            symbol_table[self.curr_tok.lex].type = 'procedure'
-                            symbol_table[self.curr_tok.lex].lex  = 'procedure'
-                            symbol_table[self.curr_tok.lex].param_list.append([self.curr_tok.lex[3:], '', 'in'])
-
-                        i+=1
-                        self._predefined_proc = 1
-
-                    if self.curr_tok.lex in ['getinteger', 'getbool', 'getstring', 'getfloat']:
-                        if self.curr_tok.lex in symbol_table.keys():
-                            self.proc_call = 1
-                            self.proc_name = self.curr_tok.lex
-                            symbol_table[self.curr_tok.lex] = token_symbol()
-                            symbol_table[self.curr_tok.lex].type = 'procedure'
-                            symbol_table[self.curr_tok.lex].lex  = 'procedure'
-                            symbol_table[self.curr_tok.lex].param_list.append([self.curr_tok.lex[3:], '', 'out'])
-
-                        i+=1
-                        self._predefined_proc = 1
+                    # set up/check for built in procedures
+                    self._built_in_procedure()
 
                     if (self.curr_tok.lex in symbol_table.keys()):
                         if (symbol_table[self.curr_tok.lex].procedure):
@@ -1302,13 +1314,15 @@ class parser(object):
                                                                   %(e.rec_tok, self.curr_tok.line))
                 else:
                     # fp
-                    self.curr_tok.address = self.mem_addr
-                    self.mem_addr+=1
+                    #self.curr_tok.address = self.mem_addr
 
                     # add the current token in the symbol table and assign the
                     # data type with the current token
                     symbol_table[self.curr_tok.lex] = self.curr_tok
                     symbol_table[self.curr_tok.lex].data_type = self.data_type
+                    #symbol_table[self.curr_tok.lex].address = self.curr_tok.address
+                    symbol_table[self.curr_tok.lex].address = self.mem_addr
+                    self.mem_addr+=1
 
                     if (self.local):
                         symbol_table[self.curr_tok.lex].local = 1
@@ -1351,32 +1365,15 @@ class parser(object):
             f.write("\nmain:\n")
             f.write(indent+"FP = 0;\n")
             f.write(indent+"SP = FP;\n")
+
+            # set up/check for built in procedures
+            self._built_in_procedure()
+
             while (self._statement() != "None"):
                 if (self.curr_tok.type == "end"): break
 
-                if self.curr_tok.lex in ['putinteger', 'putbool', 'putstring', 'putfloat']:
-                    if (self.curr_tok.lex not in symbol_table.keys()):
-                        self.proc_call = 1
-                        self.proc_name = self.curr_tok.lex
-                        symbol_table[self.curr_tok.lex] = token_symbol()
-                        symbol_table[self.curr_tok.lex].type = 'procedure'
-                        symbol_table[self.curr_tok.lex].lex  = 'procedure'
-                        symbol_table[self.curr_tok.lex].param_list.append([self.curr_tok.lex[3:], '', 'in'])
-
-                    i+=1
-                    self._predefined_proc = 1
-
-                if self.curr_tok.lex in ['getinteger', 'getbool', 'getstring', 'getfloat']:
-                    if self.curr_tok.lex in symbol_table.keys():
-                        self.proc_call = 1
-                        self.proc_name = self.curr_tok.lex
-                        symbol_table[self.curr_tok.lex] = token_symbol()
-                        symbol_table[self.curr_tok.lex].type = 'procedure'
-                        symbol_table[self.curr_tok.lex].lex  = 'procedure'
-                        symbol_table[self.curr_tok.lex].param_list.append([self.curr_tok.lex[3:], '', 'out'])
-
-                    i+=1
-                    self._predefined_proc = 1
+                # set up/check for built in procedures
+                self._built_in_procedure()
 
                 # check to see if current statement is a procedure call
                 if (self.curr_tok.lex in symbol_table.keys()):
