@@ -46,6 +46,9 @@ def read_file(file_read):
     global f_read
     f_read = open(file_read).read()
 
+    # force case insensitive
+    f_read = f_read.lower()
+
     return f_read
 
 def get_next_char():
@@ -108,9 +111,6 @@ def get_tokens():
                 if (get_next_char() == None): break
 
             if (debug): debug("alhpa: ", line_num, curr_token)
-
-            # force case insensitive
-            curr_token = curr_token.lower()
 
             if (curr_token in reserved_ids):
                 yield _token((curr_token, curr_token), line_num)
