@@ -164,6 +164,9 @@ class parser(object):
         global for_sub_idx
 
         self.var = self.curr_tok.lex
+        print "STATEMENTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
+        print self.var
+        print "STATEMENTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
 
         # check for assignment
         if (not(self.proc_call) and (self.curr_tok.type == "id") and
@@ -254,7 +257,7 @@ class parser(object):
                 self._skip_line()
                 return
             else:
-                self.proc_args = 0
+                self.proc_args = False
                 self._get_next_tok()
                 self._check_for_semicolon()
 
@@ -268,7 +271,8 @@ class parser(object):
                 return
             else:
                 #i+=1
-                f.write(indent+"R[%s] = (int)&&return_from_%s;\n" %(i, self.proc_name))
+                self.label_idx += 1
+                f.write(indent+"R[%s] = (int)&&return_from_%s_%i;\n" %(i, self.proc_name, self.label_idx))
                 f.write(indent+"M[SP] = R[%s];\n" %(i))
                 f.write(indent+"SP++;\n")
                 i+=1
@@ -282,12 +286,13 @@ class parser(object):
                     self.sp_offset+=1
 
                 self.sp_offset = 0
-                f.write(indent+"goto %s;\n" %(self.proc_name))
-                f.write(indent+"return_from_%s:\n" %(self.proc_name))
+                f.write(indent+"goto %s;\n"    %(self.proc_name))
+                f.write("return_from_%s_%i:\n" %(self.proc_name, self.label_idx))
 
             count = 1
             self.proc_call = 0
             self._predefined_proc = None
+            i+=1
             return self._get_next_tok()
         else:
             return
@@ -338,7 +343,9 @@ class parser(object):
                 self._skip_line()
                 return
             else:
-                return
+                self._assign = 0
+
+        return
 
     # <if_statement> ::=
     #                if ( <expression> ) then ( <statement> ; )+
@@ -545,31 +552,59 @@ class parser(object):
     def _argument_list(self):
         num_of_args = 0
         self._get_next_tok()
-        while (self.curr_tok.lex != ")"):
+        while self.curr_tok.lex != ")":
 
             num_of_args+=1
-            self.proc_args = 1
+            self.proc_args = True
 
-            exp = self.curr_tok.lex
-            arg = self._expression()
+            #exp = self.curr_tok.lex
+            exp = self.curr_tok
+            print "EXPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"
+            print exp.lex
+            print exp.type
+            print "EXPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"
 
             # check to see if procedure call is one we have predefined for runtime
-            if (self._predefined_proc):
-                symbol_table[self.proc_name].param_list[0][1] = self.curr_tok.lex
-                symbol_table[self.proc_name].param_count = num_of_args
+            if self._predefined_proc and self.string_proc:
+                if self.curr_tok.lex not in symbol_table.keys():
+                    self.string_proc = 0
+                    self.var = exp.lex
+                    symbol_table[exp.lex] = token_symbol()
+                    symbol_table[exp.lex].data_type = exp.type
+
+                    symbol_table[exp.lex].address = self.mem_addr
+                    self.mem_addr+=1
+
+                    f.write(indent+"//STRING PROC\n")
+                    symbol_table[self.proc_name].param_list[0][1] = self.curr_tok.lex
+                    symbol_table[self.proc_name].param_count = num_of_args
+
+            arg = self._expression()
+
+            if self._predefined_proc and not self.string_proc:
+                if self.curr_tok.lex not in symbol_table.keys():
+                    symbol_table[self.proc_name].param_list[0][1] = self.curr_tok.lex
+                    symbol_table[self.proc_name].param_count = num_of_args
 
             # check to see if argument is in/out and local/global
-            if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "in" and symbol_table[exp].local:
-                f.write(indent+"R[%s] = M[FP+%s];\n" %(arg-1, symbol_table[exp].address))
+            if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "in" and symbol_table[exp.lex].local:
+                f.write("//innnnn"+indent+self.proc_name+"\n")
+                print "CHECKINGGGGGGGGGGGGGGGGGGGGGGGGG"
+                print exp.type
+                print "CHECKINGGGGGGGGGGGGGGGGGGGGGGGGG"
+                f.write(indent+"R[%s] = M[FP+%s];\n" %(arg-1, symbol_table[exp.lex].address))
 
-            if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "out" and symbol_table[exp].local:
-                f.write(indent+"R[%s] = FP+%s;\n" %(arg-1, symbol_table[exp].address))
+            if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "out" and symbol_table[exp.lex].local:
+                f.write("//outtttt"+indent+self.proc_name+"\n")
+                f.write(indent+"R[%s] = FP+%s;\n" %(arg-1, symbol_table[exp.lex].address))
 
-            if not symbol_table[exp].local:
-                f.write(indent+"R[%s] = %s;\n" %(arg-1, symbol_table[exp].address))
+            if symbol_table[exp.lex].local == 0:
+                f.write("//none"+indent+self.proc_name+"\n")
+                f.write(indent+"R[%s] = %s;\n" %(arg-1, symbol_table[exp.lex].address))
 
-            if (self.curr_tok.lex == ","): self._get_next_tok(); continue
+            if self.curr_tok.lex == ",": self._get_next_tok(); continue
 
+        #symbol_table[self.proc_name].param_count = num_of_args
         return arg, num_of_args
 
     # <expression> ::= <expression> & <arithOp>
@@ -931,19 +966,23 @@ class parser(object):
             size = 100
             symbol_table[self.var].size = size
             print "in factor: string"
+            print symbol_table[self.var].data_type
+
             try:
                 if (symbol_table[self.var].data_type != self.curr_tok.type):
-                    raise ErrorToken(self.var.data_type, self.curr_tok.type)
+                    raise ErrorToken(symbol_table[self.var].data_type, self.curr_tok.type)
             except ErrorToken, e:
                 e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
                                                                      %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             else:
-                for i,c in enumerate(self.curr_tok.lex):
-                    f.write(indent+"tmp_string[%s] = '%s';\n" % (i,c))
+                for t,c in enumerate(self.curr_tok.lex):
+                    f.write(indent+"tmp_string[%s] = '%s';\n" % (t,c))
 
-                f.write(indent+"tmp_string[%s] = '\\0';\n" % (i+1))
+                f.write(indent+"tmp_string[%s] = '\\0';\n" % (t+1))
                 f.write(indent+"memcpy(&M[FP+%s], tmp_string, MAX_STR_LEN);\n" % symbol_table[self.var].address)
-                f.write(indent+"SP = SP + %d;\n" % symbol_table[self.var].size)
+                #f.write(indent+"memcpy(&M[FP+%s], tmp_string, MAX_STR_LEN);\n" % symbol_table[self.var].address+size)
+                f.write(indent+"SP = SP + %d;\n"    % symbol_table[self.var].size)
+                f.write(indent+"R[%i] = FP + %s;\n" % (i, symbol_table[self.var].address))
 
                 i+=1
                 self._get_next_tok()
