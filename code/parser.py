@@ -60,7 +60,8 @@ class parser(object):
         self.not_exp = False
         self.var = None
 
-        self.mem_addr = 0
+        #self.mem_addr = 0
+        self.mem_addr = [0]
         self.local = False
         self.proc_name = None
         self.prc_var_dec = False
@@ -194,7 +195,9 @@ class parser(object):
             if (self.proc_dec):
                 #i+=1
                 # f.write(indent+"R[%d] = M[FP+%d];\n" %(i, symbol_table[reg[0].lex].address+self.mem_addr))
-                f.write(indent+"R[%d] = M[FP+%d];\n" %(i, symbol_table[self.var.lex].address+self.mem_addr))
+                #f.write(indent+"R[%d] = M[FP+%d];\n" %(i, symbol_table[self.var.lex].address+self.mem_addr))
+                #f.write(indent+"R[%d] = M[FP+%d];\n" %(i, self.mem_addr[-1]))
+                f.write(indent+"R[%d] = M[FP+%d];\n" %(i, symbol_table[self.var.lex].address))
 
                 ''''
                 if symbol_table[reg[0].lex].local:
@@ -208,6 +211,7 @@ class parser(object):
             else:
                 #f.write(indent+"M[FP+%i] = R[%i];\n" %(symbol_table[reg[0].lex].address, i-1))
                 f.write(indent+"M[FP+%i] = R[%i];\n" %(symbol_table[self.var.lex].address, i-1))
+                i+=1
                 '''
                 if symbol_table[reg[0].lex].local:
                     f.write(indent+"M[FP+%i] = R[%i];\n" %(symbol_table[reg[0].lex].address, i-1))
@@ -508,7 +512,7 @@ class parser(object):
                 #    self._statement()
                 '''
 
-                f.write(indent+"if_subroutine_%i:\n" %(if_sub_idx))
+                f.write("if_subroutine_%i:\n" % if_sub_idx)
 
             #else:
             #    f.write(indent+"subroutine_%i:\n" %(if_sub_idx))
@@ -660,8 +664,8 @@ class parser(object):
                     symbol_table[exp.lex] = token_symbol()
                     symbol_table[exp.lex].data_type = exp.type
 
-                    symbol_table[exp.lex].address = self.mem_addr
-                    #self.mem_addr+=1
+                    symbol_table[exp.lex].address = self.mem_addr[-1]
+                    self.mem_addr[-1] += 1
 
                     f.write(indent+"//STRING PROC\n")
                     #symbol_table[self.proc_name].param_list[0][1] = self.curr_tok.lex
@@ -677,7 +681,7 @@ class parser(object):
                     symbol_table[self.proc_name].param_count = num_of_args
 
             # check to see if argument is in/out and local/global
-            if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "in" and symbol_table[exp.lex].local:
+            if self._predefined_proc and symbol_table[self.proc_name].param_list[num_of_args-1][2] == "in" and symbol_table[exp.lex].local:
                 f.write("//innnnn"+indent+self.proc_name+"\n")
                 f.write("//"+indent+exp.lex+"\n")
                 print "CHECKINGGGGGGGGGGGGGGGGGGGGGGGGG"
@@ -937,7 +941,7 @@ class parser(object):
             except ErrorToken, e:
                 e.print_warning("was expecting '%s', received: '%s' on line: %i" \
                                                                       %(e.exp_tok, e.rec_tok, self.curr_tok.line))
-                symbol_table[self.curr_tok.lex].value = 0
+                #symbol_table[self.curr_tok.lex].value = 0
 
             try:
                 print symbol_table[self.var.lex].data_type
@@ -952,15 +956,15 @@ class parser(object):
                                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             else:
                 #r.append(reg[0].value)
-                r.insert(0, symbol_table[self.curr_tok.lex].value)
+                #r.insert(0, symbol_table[self.curr_tok.lex].value)
                 print "===========================NAME=========================="
                 #print "variable %s is being assigned value: %i" %(self.curr_tok.lex, int(r[0]))
                 print self.curr_tok.lex
                 #print   "R[%i] = M[%i]"    %(i, symbol_table[self.curr_tok.lex].address)
                 print   "R[%i] = %s"        %(i, symbol_table[self.curr_tok.lex].value)
-                if not self.proc_args:
-                    f.write("//comment"+"\n")
-                    f.write(indent+"R[%i] = M[FP+%i];\n" %(i, symbol_table[self.curr_tok.lex].address))
+                #if not self.proc_args:
+                f.write("//comment"+"\n")
+                f.write(indent+"R[%i] = M[FP+%i];\n" %(i, symbol_table[self.curr_tok.lex].address))
 
                 '''
                 if symbol_table[self.curr_tok.lex].local:
@@ -1115,12 +1119,14 @@ class parser(object):
                 f.write("//"+str(self.mem_addr)+"\n")
                 f.write(indent+"tmp_string[%s] = '\\0';\n" % (t+1))
                 #f.write(indent+"memcpy(&M[FP+%s], tmp_string, MAX_STR_LEN);\n" % (symbol_table[self.var].address+self.mem_addr))
-                f.write(indent+"memcpy(&M[FP+%s], tmp_string, MAX_STR_LEN);\n" % self.mem_addr)
+                f.write(indent+"memcpy(&M[FP+%s], tmp_string, MAX_STR_LEN);\n" % self.mem_addr[-1])
                 #f.write(indent+"memcpy(&M[FP+%s], tmp_string, MAX_STR_LEN);\n" % symbol_table[self.var].address+size)
                 f.write(indent+"SP = SP + %d;\n"    % symbol_table[self.var.lex].size)
                 #f.write(indent+"R[%i] = FP + %s;\n" % (i, symbol_table[self.var].address+self.mem_addr))
-                f.write(indent+"R[%i] = FP + %s;\n" % (i, self.mem_addr))
-                self.mem_addr += symbol_table[self.var.lex].address + symbol_table[self.var.lex].size
+                f.write(indent+"R[%i] = FP + %s;\n" % (i, self.mem_addr[-1]))
+                symbol_table[self.var.lex].address = self.mem_addr[-1]
+                self.mem_addr[-1] += symbol_table[self.var.lex].size
+                #self.mem_addr[-1] += symbol_table[self.var.lex].address + symbol_table[self.var.lex].size
                 #self.mem_addr += symbol_table[self.var].address + symbol_table[self.var].size
                 f.write("//"+indent+"SIZEEEEEEEEEEEEEEEEEEEEEE"+str(self.mem_addr)+"\n")
 
@@ -1315,12 +1321,14 @@ class parser(object):
                 print "PLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL"
                 print "ADDING TOKEN: %s to symbol table" % identifier
                 print "TOKEN has data type: %s" % data_type
-                print "PLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL"
                 symbol_table[identifier] = token_symbol()
-                symbol_table[identifier].address = self.mem_addr
+                symbol_table[identifier].address = self.mem_addr[-1]
+                print "TOKEN has mem addr: %s" % symbol_table[identifier].address
+                print "PLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL"
                 symbol_table[identifier].data_type = data_type
                 symbol_table[identifier].local = 1
-                self.mem_addr += 1
+
+                self.mem_addr[-1] += 1
                 self._get_next_tok()
 
             if (self.curr_tok.lex == ","): self._get_next_tok()
@@ -1356,6 +1364,7 @@ class parser(object):
             self._skip_line()
             return
         else:
+            self.mem_addr.append(0)
             print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
             self._get_next_tok()
             print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
@@ -1400,6 +1409,7 @@ class parser(object):
             elif (self.curr_tok.type == "begin"):
                 self._get_next_tok()
                 print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
+                f.write(indent+"SP = SP + 1;\n")
 
                 # set up/check for built in procedures
                 self._built_in_procedure()
@@ -1468,6 +1478,7 @@ class parser(object):
             f.write(indent+"SP = SP-%i;\n" %(symbol_table[self.proc_name].param_count))
             f.write(indent+"SP = SP-2;\n")
             f.write(indent+"goto *(void*)R[%i];\n" %(i))
+            self.mem_addr.pop()
             i+=1
             return
         return
@@ -1522,9 +1533,10 @@ class parser(object):
                     print "DEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
                     print "ADDING TOKEN: %s to symbol table" % self.curr_tok.lex
                     print "TOKEN has data type: %s" % self.data_type
+                    symbol_table[self.curr_tok.lex].address = self.mem_addr[-1]
+                    self.mem_addr[-1] += 1
+                    print "TOKEN has mem addre locat at: %s" % symbol_table[self.curr_tok.lex].address
                     print "DEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
-                    symbol_table[self.curr_tok.lex].address = self.mem_addr
-                    self.mem_addr+=1
 
                     if (self.local):
                         symbol_table[self.curr_tok.lex].local = 1
