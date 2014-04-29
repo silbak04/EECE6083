@@ -86,6 +86,8 @@ class parser(object):
         return
 
     def _check_for_semicolon(self):
+        print "CHECK FOR SEMICOLON"
+        print self.curr_tok.lex
         try:
             if (self.curr_tok.lex != ";"):
                 raise ErrorToken(";", self.curr_tok.lex)
@@ -122,6 +124,14 @@ class parser(object):
             self.proc_name = self.curr_tok.lex
 
         return
+
+    def _check_for_proc_call(self):
+
+        if (self.curr_tok.lex in symbol_table.keys()):
+            if (symbol_table[self.curr_tok.lex].procedure):
+                self.proc_call = 1
+
+        return self.proc_call
 
     def _if_error(self, error):
         # TODO: change how this is whole function is handled
@@ -206,6 +216,7 @@ class parser(object):
                 '''
 
             #reg[0].value = int(r[0])
+            print "CHECK FOR SEMI IN ASSIGNMENT"
             self._check_for_semicolon()
             a = self._get_next_tok()
             print "=================================="
@@ -224,6 +235,7 @@ class parser(object):
             count = 1
             self._if_statement(if_sub_idx)
 
+            print "CHECK FOR SEMI IN IF"
             self._check_for_semicolon()
             return self._get_next_tok()
 
@@ -236,6 +248,7 @@ class parser(object):
             count = 1
             self._for_loop(for_sub_idx)
 
+            print "CHECK FOR SEMI IN FOR"
             self._check_for_semicolon()
             return self._get_next_tok()
 
@@ -252,6 +265,7 @@ class parser(object):
             count = 1
             self._get_next_tok()
 
+            print "CHECK FOR SEMI IN RETURN"
             self._check_for_semicolon()
             return self._get_next_tok()
 
@@ -282,6 +296,7 @@ class parser(object):
             else:
                 self.proc_args = False
                 self._get_next_tok()
+                print "CHECK FOR SEMI IN PROC CALL"
                 self._check_for_semicolon()
 
             try:
@@ -382,6 +397,8 @@ class parser(object):
     #                end if
     def _if_statement(self, if_sub_idx):
 
+        print "INNNNNNNNNN IF"
+
         # (
         try:
             if (self.curr_tok.lex != "("):
@@ -394,8 +411,11 @@ class parser(object):
         # <expression>
         else:
             self._get_next_tok()
+            # TODO: might need to change the way i'm doing this
+            # if(x) <--- we want to save 'x'
             self.var = self.curr_tok
             if (self.curr_tok.lex not in symbol_table.keys()):
+                #symbol_table[self.curr_tok.lex] = token_symbol()
                 symbol_table[self.curr_tok.lex] = self.curr_tok
                 symbol_table[self.curr_tok.lex].data_type = self.curr_tok.type
                 reg.insert(0, symbol_table[self.curr_tok.lex])
@@ -433,11 +453,23 @@ class parser(object):
         else:
             print "getting statement"
             print self._get_next_tok().lex
-            f.write(indent+"if (R[%i] == 0) goto if_subroutine_%i;\n" %(i, if_sub_idx))
+            f.write(indent+"if (R[%i] == 0) goto if_subroutine_%i;\n" %(i-1, if_sub_idx))
 
+            #while (self._statement() == None and count):
+            while self._statement() not in ["else", "end", "None"]:
+                continue
+
+            '''
             try:
+                # TODO: might need to change the way i'm doing this
+                #self.var = self.curr_tok
+                #print self.var.lex
+
+                # check for built in procedure/procedure call
+                self._built_in_procedure()
+                self._check_for_proc_call()
+
                 # make sure the we have at least 1 statement
-                #while (self._statement() == None and count == 0):
                 if (self._statement() == None and count == 0):
                     #raise ErrorToken("missing statement after 'then' in 'if' block", "", line_num)
                     raise ErrorToken("statement", "no statement")
@@ -448,14 +480,22 @@ class parser(object):
 
             #else:
             #    self._statement()
+            '''
 
             if (self.curr_tok.type == "else"):
                 f.write(indent+"goto if_subroutine_%i;\n" %(if_sub_idx+1))
-                f.write(indent+"if_subroutine_%i:\n"      %(if_sub_idx))
+                f.write("if_subroutine_%i:\n"             %(if_sub_idx))
                 if_sub_idx+=1
 
                 self._get_next_tok()
+                self._built_in_procedure()
+                self._check_for_proc_call()
 
+                while self._statement() not in ["else", "end", "None"]:
+                    #if (self.curr_tok.type == "end"): break
+                    continue
+
+                '''
                 try:
                     if (self._statement() == None and count == 0):
                         #raise ErrorToken("missing statement after 'then' in 'if' block", "", line_num)
@@ -466,6 +506,7 @@ class parser(object):
                     _if_error(5)
                 #else:
                 #    self._statement()
+                '''
 
                 f.write(indent+"if_subroutine_%i:\n" %(if_sub_idx))
 
@@ -551,7 +592,18 @@ class parser(object):
             self._get_next_tok()
 
         # <statement>
+        self._built_in_procedure()
+        self._check_for_proc_call()
+
+        while self._statement() not in ["else", "None"]:
+            continue
+
+        '''
         try:
+
+            self._built_in_procedure()
+            self._check_for_proc_call()
+
             if (self._statement() == None and count == 0):
                 raise ErrorToken("statement", "no statement", line_num)
         except ErrorToken, e:
@@ -559,6 +611,7 @@ class parser(object):
                                                           %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             self._skip_line()
             return
+        '''
 
         if (self.curr_tok.lex == "end"):
             self._get_next_tok()
@@ -589,13 +642,17 @@ class parser(object):
             self.proc_args = True
 
             #exp = self.curr_tok.lex
+            # TODO: remove this local variable
             exp = self.curr_tok
+            self.var.lex = exp.lex
             print "EXPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"
+            print self.var.lex
             print exp.lex
             print exp.type
+            #print symbol_table[exp.lex].data_type
             print "EXPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"
 
-            f.write("//IN BEG"+exp.lex)
+            f.write("//IN BEG"+exp.lex+"\n")
             # check to see if procedure call is one we have predefined for runtime
             if self._predefined_proc and self.string_proc:
                 if self.curr_tok.lex not in symbol_table.keys():
@@ -883,10 +940,13 @@ class parser(object):
                 symbol_table[self.curr_tok.lex].value = 0
 
             try:
+                print symbol_table[self.var.lex].data_type
                 if self._assign:
-                    if (reg[0].data_type != symbol_table[self.curr_tok.lex].data_type):
+                    #if (reg[0].data_type != symbol_table[self.curr_tok.lex].data_type):
                     #if (reg[0].data_type != self.curr_tok.data_type):
-                        raise ErrorToken(reg[0].data_type, self.curr_tok.data_type)
+                    if (symbol_table[self.var.lex].data_type != symbol_table[self.curr_tok.lex].data_type):
+                        #raise ErrorToken(reg[0].data_type, self.curr_tok.data_type)
+                        raise ErrorToken(symbol_table[self.var.lex].data_type, symbol_table[self.curr_tok.lex].data_type)
             except ErrorToken, e:
                 e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
                                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
@@ -899,7 +959,8 @@ class parser(object):
                 #print   "R[%i] = M[%i]"    %(i, symbol_table[self.curr_tok.lex].address)
                 print   "R[%i] = %s"        %(i, symbol_table[self.curr_tok.lex].value)
                 if not self.proc_args:
-                        f.write(indent+"R[%i] = M[FP+%i];\n" %(i, symbol_table[self.curr_tok.lex].address))
+                    f.write("//comment"+"\n")
+                    f.write(indent+"R[%i] = M[FP+%i];\n" %(i, symbol_table[self.curr_tok.lex].address))
 
                 '''
                 if symbol_table[self.curr_tok.lex].local:
@@ -925,8 +986,8 @@ class parser(object):
             try:
                 #if (reg[0].data_type != self.curr_tok.type):
                 #print symbol_table[self.var.lex].data_type
+                #print self.exp.lex
                 print symbol_table[self.var.lex].data_type
-                print reg
                 #if (self.var.data_type != self.curr_tok.type):
                 if (symbol_table[self.var.lex].data_type != self.curr_tok.type):
                     #raise ErrorToken(reg[0].data_type, self.curr_tok.type)
@@ -1158,6 +1219,8 @@ class parser(object):
         else:
             self._get_next_tok()
 
+        self._check_for_semicolon()
+        '''
         try:
             if (self.curr_tok.lex != ";"):
                 raise ErrorToken(";", self.curr_tok.lex)
@@ -1167,6 +1230,7 @@ class parser(object):
             self._skip_line()
             return
         return
+        '''
 
     #<variable_declaration> ::=
     #                    <type_mark> <identifier>
@@ -1250,6 +1314,7 @@ class parser(object):
                 symbol_table[self.proc_name].param_count = num_parameters
                 print "PLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL"
                 print "ADDING TOKEN: %s to symbol table" % identifier
+                print "TOKEN has data type: %s" % data_type
                 print "PLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL"
                 symbol_table[identifier] = token_symbol()
                 symbol_table[identifier].address = self.mem_addr
@@ -1345,10 +1410,13 @@ class parser(object):
 
                     # set up/check for built in procedures
                     self._built_in_procedure()
+                    self._check_for_proc_call()
 
+                    '''
                     if (self.curr_tok.lex in symbol_table.keys()):
                         if (symbol_table[self.curr_tok.lex].procedure):
                             self.proc_call = 1
+                    '''
 
                     continue
 
@@ -1453,6 +1521,7 @@ class parser(object):
                     #symbol_table[self.curr_tok.lex].address = self.curr_tok.address
                     print "DEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
                     print "ADDING TOKEN: %s to symbol table" % self.curr_tok.lex
+                    print "TOKEN has data type: %s" % self.data_type
                     print "DEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
                     symbol_table[self.curr_tok.lex].address = self.mem_addr
                     self.mem_addr+=1
@@ -1516,9 +1585,12 @@ class parser(object):
                 self._built_in_procedure()
 
                 # check to see if current statement is a procedure call
+                self._check_for_proc_call()
+                '''
                 if (self.curr_tok.lex in symbol_table.keys()):
                     if (symbol_table[self.curr_tok.lex].procedure):
                         self.proc_call = 1
+                '''
 
                 if self.proc_call and not self._predefined_proc:
                     f.write(indent+"SP = SP + %d;\n" %symbol_table[self.proc_name].param_count)
