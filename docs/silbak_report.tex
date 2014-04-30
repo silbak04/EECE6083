@@ -1,0 +1,95 @@
+\documentclass[10pt]{article}
+
+\usepackage{fancyhdr}
+\usepackage[includeheadfoot,left=0.5in, right=0.5in, top=0.5in, bottom=0.5in]{geometry}
+\usepackage{lastpage}
+\usepackage{extramarks}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{courier}
+\usepackage{float}
+\usepackage{url}
+\usepackage{subfigure}
+\usepackage{varwidth}
+\usepackage{caption}
+\usepackage{multirow}
+\usepackage[pdfborder={0 0 0}]{hyperref}
+\usepackage[compact,small]{titlesec}
+\usepackage{microtype}
+\usepackage{verbatim}
+\usepackage{booktabs}
+\usepackage{indentfirst}
+\usepackage{pgffor}
+
+\parskip = 0.5\baselineskip
+\setlength{\belowcaptionskip}{-\baselineskip}
+
+\captionsetup{font=scriptsize}
+\captionsetup{labelfont=bf}
+
+\pagestyle{fancy}
+\rhead{Samir Silbak}
+\lhead{EECS6083: Compiler Theory}
+\rfoot{Page\ \thepage\ of \protect\pageref{LastPage}}
+\cfoot{}
+\renewcommand\headrulewidth{0.4pt}
+\renewcommand\footrulewidth{0.4pt}
+
+\setlength\parindent{0pt} % Removes all indentation from paragraphs
+
+\title{
+    \vspace{2in}
+    \textmd{\textbf{EECS6083: Compiler Theory}}\\
+    \vspace{4in}
+}
+\author{\textbf{Samir Silbak}}
+
+\begin{document}
+\maketitle
+\newpage
+\section{Project Description}
+For this project we were required to implement a recursive decent parser (LL(1)
+compiler). We start off by creating a scanner which communicates with the
+parser. The scanner feeds each token to the parser. The parser will then make
+sure syntax and semantics are correct. Once this is ensured, we will then
+generate C code. This generated C code is then compiled and linked with
+runtime functions. The language for which the compiler is written in is Python.
+The source code can be found in the \texttt{code} directory.
+
+\section{Usage}
+\texttt{compiler.py} was written to combine all of the source code together,
+hence this is the top level module. Running this Python program will generate,
+compile and run the executable. There are several tests that have been added in
+the \texttt{tests} directory. An example of using the program would be like so:
+
+\begin{verbatim}
+$ ./compiler.py tests/factorial.src
+3628800
+\end{verbatim}
+
+If the program is run without any arguments, the generated output will be
+shown:
+
+\begin{verbatim}
+usage: compiler.py [-h] filename
+compiler.py: error: too few arguments
+\end{verbatim}
+
+Passing the \texttt{h} flag will let the user know that the program takes only
+\texttt{src} file extensions:
+
+\begin{verbatim}
+./compiler.py -h
+usage: compiler.py [-h] filename
+
+EECS 6083 Compiler
+
+positional arguments:
+  filename    input .src file
+
+optional arguments:
+  -h, --help  show this help message and exit
+\end{verbatim}
+
+\end{document}
