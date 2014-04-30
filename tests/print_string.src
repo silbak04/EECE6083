@@ -1,7 +1,7 @@
 program print_string is
-    //string a;
+    string a;
 begin
     putString("hello");
-    //a := " world";
-    //putString(a);
+    a := " world";
+    putString(a);
 end program;

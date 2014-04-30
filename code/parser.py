@@ -19,6 +19,8 @@
 # Free Software Foundation, Inc.,
 # 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 
+import argparse
+
 from scanner import *
 from exceps  import *
 from symbol_table import *
@@ -31,6 +33,7 @@ i = 1
 count = 0
 if_sub_idx = -1
 for_sub_idx = -1
+parser_error = False
 
 class parser(object):
     def __init__(self, tokens):
@@ -43,7 +46,6 @@ class parser(object):
         self.curr_tok.lex  = self.curr_token[1]
         self.curr_tok.line = self.curr_token[2]
 
-        #self.var_dec = False
         self.proc_dec = False
         self.proc_call = False
         self.proc_args = False
@@ -60,7 +62,6 @@ class parser(object):
         self.not_exp = False
         self.var = None
 
-        #self.mem_addr = 0
         self.mem_addr = [0]
         self.local = False
         self.proc_name = None
@@ -87,8 +88,6 @@ class parser(object):
         return
 
     def _check_for_semicolon(self):
-        print "CHECK FOR SEMICOLON"
-        print self.curr_tok.lex
         try:
             if (self.curr_tok.lex != ";"):
                 raise ErrorToken(";", self.curr_tok.lex)
@@ -180,11 +179,7 @@ class parser(object):
         global if_sub_idx
         global for_sub_idx
 
-        #self.var = self.curr_tok.lex
         self.var = self.curr_tok
-        print "STATEMENTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
-        print self.var.lex
-        print "STATEMENTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
 
         # check for assignment
         if (not(self.proc_call) and (self.curr_tok.type == "id") and
@@ -193,10 +188,6 @@ class parser(object):
 
             # assignment is done, assign register to memory location
             if (self.proc_dec):
-                #i+=1
-                # f.write(indent+"R[%d] = M[FP+%d];\n" %(i, symbol_table[reg[0].lex].address+self.mem_addr))
-                #f.write(indent+"R[%d] = M[FP+%d];\n" %(i, symbol_table[self.var.lex].address+self.mem_addr))
-                #f.write(indent+"R[%d] = M[FP+%d];\n" %(i, self.mem_addr[-1]))
                 f.write(indent+"R[%d] = M[FP+%d];\n" %(i, symbol_table[self.var.lex].address))
 
                 ''''
@@ -209,7 +200,6 @@ class parser(object):
                 f.write(indent+"M[R[%d]] = R[%d];\n" %(i, i-1))
                 i+=1
             else:
-                #f.write(indent+"M[FP+%i] = R[%i];\n" %(symbol_table[reg[0].lex].address, i-1))
                 f.write(indent+"M[FP+%i] = R[%i];\n" %(symbol_table[self.var.lex].address, i-1))
                 i+=1
                 '''
@@ -219,16 +209,8 @@ class parser(object):
                     f.write(indent+"M[%i] = R[%i];\n" %(symbol_table[reg[0].lex].address, i-1))
                 '''
 
-            #reg[0].value = int(r[0])
-            print "CHECK FOR SEMI IN ASSIGNMENT"
             self._check_for_semicolon()
-            a = self._get_next_tok()
-            print "=================================="
-            print "NEXT TOKEN BEFORE LEAVING STATEMENT"
-            print a.lex
-            print "=================================="
-            return a.lex
-            #return self._get_next_tok()
+            return self._get_next_tok().lex
 
         if (self.curr_tok.type == "if"):
             self._get_next_tok()
@@ -239,7 +221,6 @@ class parser(object):
             count = 1
             self._if_statement(if_sub_idx)
 
-            print "CHECK FOR SEMI IN IF"
             self._check_for_semicolon()
             return self._get_next_tok()
 
@@ -252,7 +233,6 @@ class parser(object):
             count = 1
             self._for_loop(for_sub_idx)
 
-            print "CHECK FOR SEMI IN FOR"
             self._check_for_semicolon()
             return self._get_next_tok()
 
@@ -269,25 +249,15 @@ class parser(object):
             count = 1
             self._get_next_tok()
 
-            print "CHECK FOR SEMI IN RETURN"
             self._check_for_semicolon()
             return self._get_next_tok()
 
         if (self.curr_tok.type == "id" and self.proc_call):
-            print "PROCEDURE CALL"
             self._get_next_tok()
-            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
             f.write(indent+"/* calling '%s' procedure */\n" %(self.proc_name))
 
             arg, num_args = self._argument_list()
-            print "NUMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
-            print num_args
-            print "NUMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
             self.sp_offset = arg - num_args
-
-            print "NUMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
-            print self.sp_offset
-            print "NUMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"
 
             try:
                 if (self.curr_tok.lex != ")"):
@@ -300,7 +270,6 @@ class parser(object):
             else:
                 self.proc_args = False
                 self._get_next_tok()
-                print "CHECK FOR SEMI IN PROC CALL"
                 self._check_for_semicolon()
 
             try:
@@ -312,7 +281,6 @@ class parser(object):
                 self._skip_line()
                 return
             else:
-                #i+=1
                 self.label_idx += 1
                 f.write(indent+"R[%s] = (int)&&return_from_%s_%i;\n" %(i, self.proc_name, self.label_idx))
                 f.write(indent+"M[SP] = R[%s];\n" %(i))
@@ -352,10 +320,6 @@ class parser(object):
     #           <identifier> [ [ <expression> ] ]
     def _assignment(self):
 
-        print "=================ASSIGNMENT===================="
-        print "Variable %s is getting assigned" %(self.curr_tok.lex)
-        print "value of prc call %i" %(self.proc_call)
-
         f.write("\n"+indent+"/* assigned statement */\n")
         try:
             if (self.curr_tok.lex not in symbol_table.keys()):
@@ -367,10 +331,7 @@ class parser(object):
             return
 
         try:
-            #reg.append(symbol_table[self.curr_tok.lex])
             reg.insert(0, symbol_table[self.curr_tok.lex])
-            #reg.append(symbol_table[self.curr_tok.lex])
-            #print reg[0].data_type
             self._get_next_tok()
             if (self.curr_tok.lex != ":="):
                 raise ErrorToken(":=", self.curr_tok.lex)
@@ -390,8 +351,6 @@ class parser(object):
                                                               %(e.exp_tok, e.rec_tok, self.curr_tok.line))
                 self._skip_line()
                 return
-            else:
-                self._assign = 0
 
         return
 
@@ -401,8 +360,6 @@ class parser(object):
     #                end if
     def _if_statement(self, if_sub_idx):
 
-        print "INNNNNNNNNN IF"
-
         # (
         try:
             if (self.curr_tok.lex != "("):
@@ -410,12 +367,12 @@ class parser(object):
         except ErrorToken, e:
             e.print_error("was expecting '%s', received: '%s' on line: %i" \
                                                           %(e.exp_tok, e.rec_tok, self.curr_tok.line))
-            _if_error(1)
+            self._if_error(1)
 
         # <expression>
         else:
             self._get_next_tok()
-            # TODO: might need to change the way i'm doing this
+
             # if(x) <--- we want to save 'x'
             self.var = self.curr_tok
             if (self.curr_tok.lex not in symbol_table.keys()):
@@ -430,8 +387,6 @@ class parser(object):
             except ErrorToken, e:
                 e.print_error("was expecting '%s', received: '%s' on line: %i" \
                                                               %(e.exp_tok, e.rec_tok, self.curr_tok.line))
-            #else:
-            #    self._expression()
 
         # )
         try:
@@ -440,7 +395,7 @@ class parser(object):
         except ErrorToken, e:
             e.print_error("was expecting '%s', received: '%s' on line: %i" \
                                                           %(e.exp_tok, e.rec_tok, self.curr_tok.line))
-            _if_error(2)
+            self._if_error(2)
         else:
             self._get_next_tok()
 
@@ -451,15 +406,13 @@ class parser(object):
         except ErrorToken, e:
             e.print_error("was expecting '%s', received: '%s' on line: %i" \
                                                           %(e.exp_tok, e.rec_tok, self.curr_tok.line))
-            _if_error(3)
+            self._if_error(3)
 
         # <statement>
         else:
-            print "getting statement"
-            print self._get_next_tok().lex
+            self._get_next_tok()
             f.write(indent+"if (R[%i] == 0) goto if_subroutine_%i;\n" %(i-1, if_sub_idx))
 
-            #while (self._statement() == None and count):
             while self._statement() not in ["else", "end", "None"]:
                 continue
 
@@ -518,7 +471,6 @@ class parser(object):
             #    f.write(indent+"subroutine_%i:\n" %(if_sub_idx))
 
             if (self.curr_tok.lex == "end"):
-                print "end test"
                 self._get_next_tok()
                 try:
                     if (self.curr_tok.lex != "if"):
@@ -526,7 +478,7 @@ class parser(object):
                 except ErrorToken, e:
                     e.print_error("was expecting '%s', received: '%s' on line: %i" \
                                                                   %(e.exp_tok, e.rec_tok, self.curr_tok.line))
-                    _if_error(6)
+                    self._if_error(6)
                 else:
                     return self._get_next_tok()
 
@@ -562,13 +514,9 @@ class parser(object):
 
         # <expression>
         else:
-            print "BEFORE GOING TO EXPRESSION!!!!!!!!!!!!!!!!!!!!!!!!!"
-            print self.curr_tok.lex
-            print "BEFORE GOING TO EXPRESSION!!!!!!!!!!!!!!!!!!!!!!!!!"
             if (self.curr_tok.lex not in symbol_table.keys()):
                 symbol_table[self.curr_tok.lex] = self.curr_tok
                 symbol_table[self.curr_tok.lex].data_type = self.curr_tok.type
-                #reg.append(symbol_table[self.curr_tok.lex])
                 reg.insert(0, symbol_table[self.curr_tok.lex])
 
             f.write(indent+"if (R[%i] == 0) goto for_subroutine_%i:\n" %(i, for_sub_idx))
@@ -580,8 +528,6 @@ class parser(object):
                                                               %(e.exp_tok, e.rec_tok, self.curr_tok.line))
                 self._skip_line()
                 return
-            #else:
-            #    self._expression()
 
         # )
         try:
@@ -649,14 +595,7 @@ class parser(object):
             # TODO: remove this local variable
             exp = self.curr_tok
             self.var.lex = exp.lex
-            print "EXPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"
-            print self.var.lex
-            print exp.lex
-            print exp.type
-            #print symbol_table[exp.lex].data_type
-            print "EXPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP"
 
-            f.write("//IN BEG"+exp.lex+"\n")
             # check to see if procedure call is one we have predefined for runtime
             if self._predefined_proc and self.string_proc:
                 if self.curr_tok.lex not in symbol_table.keys():
@@ -664,10 +603,9 @@ class parser(object):
                     symbol_table[exp.lex] = token_symbol()
                     symbol_table[exp.lex].data_type = exp.type
 
-                    symbol_table[exp.lex].address = self.mem_addr[-1]
-                    self.mem_addr[-1] += 1
+                    #symbol_table[exp.lex].address = self.mem_addr[-1]
+                    #self.mem_addr[-1] += 1
 
-                    f.write(indent+"//STRING PROC\n")
                     #symbol_table[self.proc_name].param_list[0][1] = self.curr_tok.lex
                     symbol_table[self.proc_name].param_list[0][1] = exp.lex
                     symbol_table[self.proc_name].param_count = num_of_args
@@ -676,17 +614,11 @@ class parser(object):
 
             if self._predefined_proc and not self.string_proc:
                 if self.curr_tok.lex not in symbol_table.keys():
-                    f.write("//"+indent+exp.lex+"\n")
                     symbol_table[self.proc_name].param_list[0][1] = exp.lex
                     symbol_table[self.proc_name].param_count = num_of_args
 
             # check to see if argument is in/out and local/global
             if self._predefined_proc and symbol_table[self.proc_name].param_list[num_of_args-1][2] == "in" and symbol_table[exp.lex].local:
-                f.write("//innnnn"+indent+self.proc_name+"\n")
-                f.write("//"+indent+exp.lex+"\n")
-                print "CHECKINGGGGGGGGGGGGGGGGGGGGGGGGG"
-                print exp.type
-                print "CHECKINGGGGGGGGGGGGGGGGGGGGGGGGG"
                 f.write(indent+"R[%s] = M[FP+%s];\n" %(arg-1, symbol_table[exp.lex].address))
                 '''
                 if symbol_table[self.curr_tok.lex].local:
@@ -696,8 +628,6 @@ class parser(object):
                 '''
 
             if symbol_table[self.proc_name].param_list[num_of_args-1][2] == "out" and symbol_table[exp.lex].local:
-                f.write("//outtttt"+indent+self.proc_name+"\n")
-                f.write("//"+indent+exp.lex+"\n")
                 f.write(indent+"R[%s] = FP+%s;\n" %(arg-1, symbol_table[exp.lex].address))
                 '''
                 if symbol_table[self.curr_tok.lex].local:
@@ -707,9 +637,6 @@ class parser(object):
                 '''
 
             if symbol_table[exp.lex].local == 0:
-                f.write("//none"+indent+self.proc_name+"\n")
-                f.write("")
-                f.write("//"+indent+exp.lex+"\n")
                 f.write(indent+"R[%s] = %s;\n" %(arg-1, symbol_table[exp.lex].address))
 
             if self.curr_tok.lex == ",": self._get_next_tok(); continue
@@ -722,8 +649,6 @@ class parser(object):
     #                | [ not ] <arithOp>
     def _expression(self):
         global i
-        print "'%s, %s' on line: %d" %(self.curr_tok.type, self.curr_tok.lex, self.curr_tok.line)
-        print "in exp"
 
         if (self.curr_tok.lex == "not"):
             self._get_next_tok()
@@ -761,29 +686,22 @@ class parser(object):
     def _arith_op(self):
         global i
 
-        print "in arith"
         lhs = self._relation()
 
         while (self.curr_tok.lex == "+" or self.curr_tok.lex == "-"):
             if (self.curr_tok.lex == "+"):
-                print "in arith: in plus before"
 
                 self._get_next_tok()
                 rhs = self._relation()
-
-                print "in arith: in plus after"
 
                 f.write(indent+"R[%i] = R[%i] + R[%i];\n" %(i, lhs-1, rhs-1))
                 i+=1
                 lhs = i
 
             if (self.curr_tok.lex == "-"):
-                print "in arith: in minus before"
 
                 self._get_next_tok()
                 rhs = self._relation()
-
-                print "in arith: in minus after"
 
                 f.write(indent+"R[%i] = R[%i] - R[%i];\n" %(i, lhs-1, rhs-1))
                 i+=1
@@ -801,12 +719,10 @@ class parser(object):
     def _relation(self):
         global i
 
-        print "in relation"
         lhs = self._term()
 
         while (self.curr_tok.lex in ["!=", "==", ">", "<=", ">=", "<"]):
             if (self.curr_tok.lex == "!="):
-                print "in rel: in !="
 
                 self._get_next_tok()
                 rhs = self._term()
@@ -816,7 +732,6 @@ class parser(object):
                 lhs = i
 
             elif (self.curr_tok.lex == "=="):
-                print "in rel: in =="
 
                 self._get_next_tok()
                 rhs = self._term()
@@ -826,7 +741,6 @@ class parser(object):
                 lhs = i
 
             elif (self.curr_tok.lex == ">"):
-                print "in rel: in >"
 
                 self._get_next_tok()
                 rhs = self._term()
@@ -836,7 +750,6 @@ class parser(object):
                 lhs = i
 
             elif (self.curr_tok.lex == "<="):
-                print "in rel: in <="
 
                 self._get_next_tok()
                 rhs = self._term()
@@ -846,7 +759,6 @@ class parser(object):
                 lhs = i
 
             elif (self.curr_tok.lex == ">="):
-                print "in rel: in >="
 
                 self._get_next_tok()
                 rhs = self._term()
@@ -856,7 +768,6 @@ class parser(object):
                 lhs = i
 
             elif (self.curr_tok.lex == "<"):
-                print "in rel: in <"
 
                 self._get_next_tok()
                 rhs = self._term()
@@ -873,29 +784,22 @@ class parser(object):
     def _term(self):
         global i
 
-        print "in term"
         lhs = self._factor()
 
         while (self.curr_tok.lex == "/" or self.curr_tok.lex == "*"):
             if (self.curr_tok.lex == "*"):
-                print "in term: in mult before"
 
                 self._get_next_tok()
                 rhs = self._factor()
-
-                print "in term: in mult after"
 
                 f.write(indent+"R[%i] = R[%i] * R[%i];\n" %(i, lhs-1, rhs-1))
                 i+=1
                 lhs = i
 
             if (self.curr_tok.lex == "/"):
-                print "in term: in div before"
 
                 self._get_next_tok()
                 rhs = self._factor()
-
-                print "in term: in div after"
 
                 f.write(indent+"R[%i] = R[%i] / R[%i];\n" %(i, lhs-1, rhs-1))
                 i+=1
@@ -913,12 +817,8 @@ class parser(object):
         global i
 
         if (self.curr_tok.lex == "("):
-            print "=================GOING BACK IN EXP=================="
-            print "in factor: before exp"
             self._get_next_tok()
             self._expression()
-            print "in factor: after exp"
-            print "=================RETURNED FROM EXP=================="
             try:
                 if (self.curr_tok.lex != ")"):
                     raise ErrorToken(")", self.curr_tok.lex)
@@ -933,7 +833,6 @@ class parser(object):
 
         # name
         if (self.curr_tok.type == "id" and self.curr_tok.lex not in reserved_ids):
-            print "in factor: id"
 
             try:
                 if not self._assign:
@@ -944,26 +843,14 @@ class parser(object):
                 #symbol_table[self.curr_tok.lex].value = 0
 
             try:
-                print symbol_table[self.var.lex].data_type
                 if self._assign:
-                    #if (reg[0].data_type != symbol_table[self.curr_tok.lex].data_type):
-                    #if (reg[0].data_type != self.curr_tok.data_type):
                     if (symbol_table[self.var.lex].data_type != symbol_table[self.curr_tok.lex].data_type):
-                        #raise ErrorToken(reg[0].data_type, self.curr_tok.data_type)
                         raise ErrorToken(symbol_table[self.var.lex].data_type, symbol_table[self.curr_tok.lex].data_type)
             except ErrorToken, e:
                 e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
                                                                          %(e.exp_tok, e.rec_tok, self.curr_tok.line))
             else:
-                #r.append(reg[0].value)
-                #r.insert(0, symbol_table[self.curr_tok.lex].value)
-                print "===========================NAME=========================="
-                #print "variable %s is being assigned value: %i" %(self.curr_tok.lex, int(r[0]))
-                print self.curr_tok.lex
-                #print   "R[%i] = M[%i]"    %(i, symbol_table[self.curr_tok.lex].address)
-                print   "R[%i] = %s"        %(i, symbol_table[self.curr_tok.lex].value)
                 #if not self.proc_args:
-                f.write("//comment"+"\n")
                 f.write(indent+"R[%i] = M[FP+%i];\n" %(i, symbol_table[self.curr_tok.lex].address))
 
                 '''
@@ -974,40 +861,25 @@ class parser(object):
                 '''
 
                 i+=1
-                #if (self.not_exp): self.not_exp = 0; f.write(indent+"R[%i] = ~R[%i];\n" %(i+1, i))
-                print "===========================NAME=========================="
-                print "RETURNING INDEX VALUE"
-                print i
-                print "RETURNING INDEX VALUE"
-                print self._get_next_tok().lex
+                self._get_next_tok()
+                self._assign = 0
                 return i
 
         # number
         if (self.curr_tok.type == "integer" or self.curr_tok.type == "float"):
-            print "in factor: integer"
-            print "VALUE OF INDEX: %i" %(i)
 
             try:
-                #if (reg[0].data_type != self.curr_tok.type):
-                #print symbol_table[self.var.lex].data_type
-                #print self.exp.lex
-                print symbol_table[self.var.lex].data_type
-                #if (self.var.data_type != self.curr_tok.type):
                 if (symbol_table[self.var.lex].data_type != self.curr_tok.type):
-                    #raise ErrorToken(reg[0].data_type, self.curr_tok.type)
                     raise ErrorToken(symbol_table[self.var.lex].data_type, self.curr_tok.type)
             except ErrorToken, e:
                 e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
                                                                      %(e.exp_tok, e.rec_tok, self.curr_tok.line))
                 return
             else:
-                #reg[0].value = self.curr_tok.lex
                 if self.curr_tok.type == "float":
-                    #f.write(indent+"tmp_float = %s;\n" % reg[0].value)
                     f.write(indent+"tmp_float = %s;\n" % self.curr_tok.lex)
                     f.write(indent+"memcpy(&R[%s], &tmp_float, sizeof(float));\n" % i)
                 else:
-                    #f.write(indent+"R[%i] = %s;\n" % (i, reg[0].value))
                     f.write(indent+"R[%i] = %s;\n" % (i, self.curr_tok.lex))
                 i+=1
                 self._get_next_tok()
@@ -1018,8 +890,6 @@ class parser(object):
             self._get_next_tok()
             try:
                 if (self.curr_tok.type == "integer" or self.curr_tok.type == "float"):
-                    print "in factor->minus: integer"
-                    print self.curr_tok.lex
                     if (reg[0].lex == self.curr_tok.lex):
                         try:
                             if (reg[0].value == None):
@@ -1042,7 +912,6 @@ class parser(object):
                         return i
 
                 elif (self.curr_tok.type == "id" and self.curr_tok.lex not in reserved_ids):
-                    print "in fact->minus: id"
                     if (reg[0].lex == self.curr_tok.lex):
                         try:
                             if (reg[0].value == None):
@@ -1052,13 +921,11 @@ class parser(object):
                                                                           %(e.exp_tok, e.rec_tok, self.curr_tok.line))
                     try:
                         if (reg[0].data_type != symbol_table[self.curr_tok.lex].data_type):
-                        #if (reg[0].data_type != self.curr_tok.data_type):
                             raise ErrorToken(reg[0].data_type, self.curr_tok.data_type)
                     except ErrorToken, e:
                         e.print_error("mismatched data types: was expecting '%s', received: '%s' on line: %i" \
                                                                              %(e.exp_tok, e.rec_tok, self.curr_tok.line))
                     else:
-                        print "===========================MINUS NAME=========================="
                         f.write(indent+"R[%i] = M[FP+%i];\n"   %(i, symbol_table[self.curr_tok.lex].address))
                         '''
                         if symbol_table[self.curr_tok.lex].local:
@@ -1069,18 +936,14 @@ class parser(object):
 
                         i+=1
                         f.write(indent+"R[%i] = -1 * R[%i];\n" %(i, i-1))
-                        print "===========================MINUS NAME=========================="
 
                         i+=1
                         self._get_next_tok()
                         return i
 
                 elif (self.curr_tok.type == "("):
-                    print "in factor->minus: exp"
-                    print "=================GOING BACK IN EXP=================="
                     self._get_next_tok()
                     self._expression()
-                    print "=================RETURNED FROM EXP=================="
                     try:
                         if (self.curr_tok.lex != ")"):
                             raise ErrorToken(")", self.curr_tok.lex)
@@ -1102,8 +965,6 @@ class parser(object):
         if (self.curr_tok.type == "string"):
             size = 100
             symbol_table[self.var.lex].size = size
-            print "in factor: string"
-            print symbol_table[self.var.lex].data_type
 
             try:
                 if (symbol_table[self.var.lex].data_type != self.curr_tok.type):
@@ -1115,20 +976,12 @@ class parser(object):
                 for t,c in enumerate(self.curr_tok.lex):
                     f.write(indent+"tmp_string[%s] = '%s';\n" % (t,c))
 
-                f.write("//"+str(symbol_table[self.var.lex].address)+"\n")
-                f.write("//"+str(self.mem_addr)+"\n")
                 f.write(indent+"tmp_string[%s] = '\\0';\n" % (t+1))
-                #f.write(indent+"memcpy(&M[FP+%s], tmp_string, MAX_STR_LEN);\n" % (symbol_table[self.var].address+self.mem_addr))
                 f.write(indent+"memcpy(&M[FP+%s], tmp_string, MAX_STR_LEN);\n" % self.mem_addr[-1])
-                #f.write(indent+"memcpy(&M[FP+%s], tmp_string, MAX_STR_LEN);\n" % symbol_table[self.var].address+size)
                 f.write(indent+"SP = SP + %d;\n"    % symbol_table[self.var.lex].size)
-                #f.write(indent+"R[%i] = FP + %s;\n" % (i, symbol_table[self.var].address+self.mem_addr))
                 f.write(indent+"R[%i] = FP + %s;\n" % (i, self.mem_addr[-1]))
-                symbol_table[self.var.lex].address = self.mem_addr[-1]
+
                 self.mem_addr[-1] += symbol_table[self.var.lex].size
-                #self.mem_addr[-1] += symbol_table[self.var.lex].address + symbol_table[self.var.lex].size
-                #self.mem_addr += symbol_table[self.var].address + symbol_table[self.var].size
-                f.write("//"+indent+"SIZEEEEEEEEEEEEEEEEEEEEEE"+str(self.mem_addr)+"\n")
 
                 i+=1
                 self._get_next_tok()
@@ -1136,7 +989,6 @@ class parser(object):
 
         # true
         if (self.curr_tok.lex == "true"):
-            print "in factor: true"
             # convert true -> 1
             reg[0].value = 1
             try:
@@ -1160,7 +1012,6 @@ class parser(object):
 
         # false
         if (self.curr_tok.lex == "false"):
-            print "in factor: false"
             # convert false -> 0
             reg[0].value = 0
             try:
@@ -1243,7 +1094,6 @@ class parser(object):
     #                    [ [ <array_size> ] ]
     def _variable_dec(self):
 
-        print "'%s, %s' on line: %d" %(self.curr_tok.type, self.curr_tok.lex, self.curr_tok.line)
         identifier = None
         try:
             # make sure token is not a reserved id
@@ -1267,7 +1117,6 @@ class parser(object):
                 self._get_next_tok()
                 self._array_size()
             elif (self.curr_tok.lex == ";"):
-                print "'%s' on line: %d" %(self.curr_tok.lex, self.curr_tok.line)
                 return self._get_next_tok()
             else:
                 raise ErrorToken("'[' or ';'", self.curr_tok.lex)
@@ -1285,8 +1134,6 @@ class parser(object):
     #<parameter> ::= <variable_declaration> (in | out)
     def _parameter_list(self):
 
-        print "PARAMETER LIST"
-        print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
         data_type = None
         identifier = None
         num_parameters = 0
@@ -1318,13 +1165,8 @@ class parser(object):
                 num_parameters+=1
                 symbol_table[self.proc_name].param_list.append([data_type, identifier, self.curr_tok.type])
                 symbol_table[self.proc_name].param_count = num_parameters
-                print "PLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL"
-                print "ADDING TOKEN: %s to symbol table" % identifier
-                print "TOKEN has data type: %s" % data_type
                 symbol_table[identifier] = token_symbol()
                 symbol_table[identifier].address = self.mem_addr[-1]
-                print "TOKEN has mem addr: %s" % symbol_table[identifier].address
-                print "PLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL"
                 symbol_table[identifier].data_type = data_type
                 symbol_table[identifier].local = 1
 
@@ -1340,8 +1182,6 @@ class parser(object):
     #                     ( [<parameter_list>] )
     def _procedure_header(self):
 
-        print "PROCEDURE HEADER"
-
         try:
             if (self.curr_tok.type != "id" or self.curr_tok.lex in reserved_ids):
                 raise ErrorToken("non-reserved identifier", self.curr_tok.lex)
@@ -1351,9 +1191,7 @@ class parser(object):
             self._skip_line()
             return
         else:
-            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
             self._get_next_tok()
-            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
 
         try:
             if (self.curr_tok.lex != "("):
@@ -1365,9 +1203,7 @@ class parser(object):
             return
         else:
             self.mem_addr.append(0)
-            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
             self._get_next_tok()
-            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
             self._parameter_list()
             try:
                 if (self.curr_tok.lex != ")"):
@@ -1381,10 +1217,8 @@ class parser(object):
                 self.prc_var_dec = 0
                 f.write("%s:\n" %(self.proc_name))
 
-            print "leaving procedure header going to proc bod"
             self._get_next_tok()
             self._procedure_body()
-            print "returned from proc body back in _procedure_header"
 
         return
 
@@ -1396,19 +1230,13 @@ class parser(object):
     def _procedure_body(self):
         global i
 
-        print "PROCEDURE BODY"
-        print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
         while (self.proc_dec):
             if (self.curr_tok.type == "global"):
-                # TODO: change this...variable inside procedure needs to be
-                # local...
                 symbol_table[self.proc_name].local = 0
                 self._get_next_tok()
-                print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
                 self._declaration()
             elif (self.curr_tok.type == "begin"):
                 self._get_next_tok()
-                print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
                 f.write(indent+"SP = SP + 1;\n")
 
                 # set up/check for built in procedures
@@ -1431,15 +1259,9 @@ class parser(object):
                     continue
 
             else:
-                # TODO: INCASE YOU FORGET WE SHOULD PROBABLY BE KEEPING
-                # TRACK OF PROGRAM NAME AND ADD A SYMBOL TABLE FOR PROGRAM
-                # NAME AND ALL ATTRIBUTES ASSOCIATED WITH IT
                 if (self.curr_tok.lex == "end"): break
-                # TODO: change this...variable inside procedure needs to be
-                # local...
                 symbol_table[self.proc_name].local = 1
                 self._declaration()
-                print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
 
         try:
             if (self.curr_tok.lex != "end"):
@@ -1453,7 +1275,6 @@ class parser(object):
             self._get_next_tok()
 
         try:
-            print "AFTER EMPTRY STATEMENTS PROCEDURE=============="
             if (self.curr_tok.type != "procedure"):
                 raise ErrorToken("procedure", self.curr_tok.lex)
         except ErrorToken, e:
@@ -1463,7 +1284,6 @@ class parser(object):
 
         try:
             self._get_next_tok()
-            print "AFTER EMPTRY STATEMENTS PROCEDURE=============="
             if (self.curr_tok.lex != ";"):
                 raise ErrorToken(";", self.curr_tok.lex)
         except ErrorToken, e:
@@ -1488,23 +1308,15 @@ class parser(object):
     # |      [ global ] <variable_declaration>
     def _declaration(self):
 
-        print "DECLARATION"
         try:
             # check for procedure declaration
             if (self.curr_tok.type == "procedure"):
-                # create local symbol table
-                # after proc is done, destroy local sym table
-                self._get_next_tok()
 
+                self._get_next_tok()
                 self.proc_name = self.curr_tok.lex
-                print "=="*40
-                print "'%s' on line: %d" %(self.proc_name, self.curr_tok.line)
-                print "=="*40
 
                 symbol_table[self.proc_name] = self.curr_tok
                 symbol_table[self.proc_name].procedure = 1
-
-                print "'%s' on line: %d" %(self.curr_tok.lex, self.curr_tok.line)
 
                 self.proc_dec = 1
                 self._procedure_header()
@@ -1522,21 +1334,13 @@ class parser(object):
                     e.print_error("variable: '%s' has already been delcared on line: %i" \
                                                                   %(e.rec_tok, self.curr_tok.line))
                 else:
-                    # fp
-                    #self.curr_tok.address = self.mem_addr
 
                     # add the current token in the symbol table and assign the
                     # data type with the current token
                     symbol_table[self.curr_tok.lex] = self.curr_tok
                     symbol_table[self.curr_tok.lex].data_type = self.data_type
-                    #symbol_table[self.curr_tok.lex].address = self.curr_tok.address
-                    print "DEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
-                    print "ADDING TOKEN: %s to symbol table" % self.curr_tok.lex
-                    print "TOKEN has data type: %s" % self.data_type
                     symbol_table[self.curr_tok.lex].address = self.mem_addr[-1]
                     self.mem_addr[-1] += 1
-                    print "TOKEN has mem addre locat at: %s" % symbol_table[self.curr_tok.lex].address
-                    print "DEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
 
                     if (self.local):
                         symbol_table[self.curr_tok.lex].local = 1
@@ -1544,10 +1348,7 @@ class parser(object):
                         self.local = 0
                         symbol_table[self.curr_tok.lex].local = 0
 
-                    print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
                     self._variable_dec()
-                    print "'%s, %s' on line: %d" %(self.curr_tok.type, self.curr_tok.lex, self.curr_tok.line)
-                    #self.var_dec = 1
 
             else:
                 raise ErrorToken("variable/procedure declaration", self.curr_tok.lex)
@@ -1566,13 +1367,10 @@ class parser(object):
     def _program_body(self):
         global i
 
-        print "PROGRAM BODY"
-        print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
         if (self.curr_tok.type == "global"):
             self.local = 0
             self.global_vars += 1
             self._get_next_tok()
-            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
             self._declaration()
 
         elif (self.curr_tok.type == "begin"):
@@ -1615,13 +1413,11 @@ class parser(object):
             self._declaration()
 
         if (self.curr_tok.type != "eof"): return self._program_body()
-        #while (self.prog_body): return self._program_body()
 
     # <program_header> ::=
     #                    program <identifier> is
     def _program_header(self):
 
-        print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
         try:
             if (self.curr_tok.type != "program"):
                 raise ErrorToken("program", self.curr_tok.lex)
@@ -1632,7 +1428,6 @@ class parser(object):
             return
         else:
             self._get_next_tok()
-            print "'%s' on line: %d" %(self.curr_tok.lex, self.curr_tok.line)
 
         try:
             if (self.curr_tok.type != "id"):# and not(eof)):
@@ -1644,7 +1439,6 @@ class parser(object):
             return
         else:
             self._get_next_tok()
-            print "'%s' on line: %d" %(self.curr_tok.lex, self.curr_tok.line)
 
         try:
             if (self.curr_tok.type != "is"):
@@ -1656,7 +1450,6 @@ class parser(object):
             return
         else:
             self._get_next_tok()
-            print "'%s' on line: %d" %(self.curr_tok.type, self.curr_tok.line)
             self._program_body()
             self.prog_body = 1
 
@@ -1681,14 +1474,18 @@ class parser(object):
 
 if (__name__ == "__main__"):
     if (check_src_file()):
-        # TODO: if scanner/parser generates error, we do not want to generate
-        # any code, so i need to terminate properly and make sure no code is
-        # generate if error
-        f = open("gen.c", "w")
-        f.write("#include \"../runtime/runtime.h\"\n")
+
+        argparser = argparse.ArgumentParser(description='Parser')
+        argparser.add_argument('filename')
+        args = argparser.parse_args()
+
+        gen_file = args.filename.rsplit(".", 1)[0] + '.c'
+
+        f = open(gen_file, "w")
+        f.write('#include <runtime.h>\n')
         f.write("int main(void) {\n")
         f.write(indent+"goto main;\n")
-        f.write(open("../runtime/runtime_inline.c").read())
+        f.write(open("runtime/runtime_inline.c").read())
         f.write('\n')
 
         parse = parser(get_tokens())

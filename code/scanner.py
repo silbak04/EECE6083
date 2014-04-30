@@ -41,6 +41,7 @@ reserved_ids = ['string'    , 'integer' , 'bool'   , 'float'    ,
                 'procedure' , 'begin'   , 'return' , 'end'      ]
 
 data_types = reserved_ids[0:4]
+scanner_error = False
 
 def read_file(file_read):
     global f_read
